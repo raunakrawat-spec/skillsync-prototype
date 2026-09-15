@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SkillSync — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --indigo:#1F2D50;
+    --indigo-soft:#34456F;
+    --indigo-pale:#E7EAF2;
+    --gold:#C68A2E;
+    --gold-pale:#F4E6C9;
+    --teal:#2F6F62;
+    --teal-pale:#E1EEE9;
+    --bg:#F3EFE6;
+    --card:#FFFFFF;
+    --ink:#201C16;
+    --ink-soft:#5B564C;
+    --line:#DED6C4;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  h1,h2,h3,.serif{font-family:'Newsreader', serif;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ---------- App shell (full-bleed: this is the real site, not a mockup) ---------- */
+  .phone{
+    width:100%;
+    min-height:100vh;
+    min-height:100dvh;
+    background:var(--card);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+  .main-col{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 16px 12px;
+    border-bottom:1px solid var(--line);
+    background:var(--card);
+    position:relative;
+    z-index:20;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:none;border:none;padding:6px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--indigo);position:relative;
+  }
+  .icon-btn:hover{background:var(--indigo-pale);}
+  .icon-btn svg{width:22px;height:22px;}
+  .wordmark{
+    font-family:'Newsreader', serif;
+    font-weight:600;
+    font-size:19px;
+    color:var(--indigo);
+    letter-spacing:0.2px;
+  }
+  .topbar-right{display:flex;align-items:center;gap:4px;}
+  .avatar-btn{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--indigo);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .avatar-btn svg{width:18px;height:18px;}
+  .dot{
+    position:absolute;top:6px;right:6px;
+    width:7px;height:7px;border-radius:50%;
+    background:var(--gold);border:1.5px solid var(--card);
+  }
+
+  /* ---------- Drawer ---------- */
+  .scrim{
+    position:absolute;inset:0;background:rgba(32,28,22,0.42);
+    opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:30;
+  }
+  .scrim.show{opacity:1;pointer-events:auto;}
+  .drawer{
+    position:absolute;top:0;bottom:0;left:0;
+    width:270px;background:var(--indigo);color:#EFE9DC;
+    transform:translateX(-100%);transition:transform .28s ease;
+    z-index:31;display:flex;flex-direction:column;padding:22px 0 20px;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:0 22px 18px;border-bottom:1px solid rgba(239,233,230,0.16);margin-bottom:8px;}
+  .drawer-head .name{font-family:'Newsreader',serif;font-size:20px;font-weight:600;color:#fff;}
+  .drawer-head .tag{font-size:12.5px;color:#B9C0D6;margin-top:3px;}
+  .drawer nav{display:flex;flex-direction:column;padding:6px 10px;gap:2px;overflow-y:auto;}
+  .drawer nav a{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 12px;border-radius:10px;color:#EFE9DC;
+    text-decoration:none;font-size:14.5px;font-weight:500;
+  }
+  .drawer nav a svg{width:18px;height:18px;flex-shrink:0;opacity:.85;}
+  .drawer nav a:hover{background:rgba(255,255,255,0.08);}
+  .drawer nav .sep{height:1px;background:rgba(239,233,230,0.14);margin:10px 12px;}
+  .drawer-foot{padding:14px 22px 0;font-size:11.5px;color:#8F97B3;border-top:1px solid rgba(239,233,230,0.14);margin-top:auto;}
+
+  /* ---------- Notification popover ---------- */
+  .notif-pop{
+    position:absolute;top:60px;right:14px;width:280px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:14px;box-shadow:0 18px 40px -18px rgba(32,28,22,0.4);
+    z-index:32;opacity:0;transform:translateY(-6px);pointer-events:none;
+    transition:all .18s ease;
+  }
+  .notif-pop.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .notif-pop .np-head{padding:13px 16px 10px;font-weight:600;font-size:14px;border-bottom:1px solid var(--line);}
+  .notif-item{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;}
+  .notif-item:last-child{border-bottom:none;}
+  .notif-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);margin-top:6px;flex-shrink:0;}
+  .notif-item p{margin:0;font-size:13px;line-height:1.4;}
+  .notif-item .t{color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+
+  /* ---------- Content ---------- */
+  .content{flex:1;overflow-y:auto;padding:18px 16px 90px;}
+  .content::-webkit-scrollbar{width:0;}
+  .panel-title{font-size:22px;font-weight:600;margin:2px 0 4px;}
+  .panel-sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;line-height:1.5;}
+
+  /* chips */
+  .chip-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;}
+  .chip-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;padding:8px 14px;border-radius:999px;
+    border:1px solid var(--line);background:var(--card);
+    font-size:13px;font-weight:500;color:var(--ink-soft);white-space:nowrap;
+  }
+  .chip.active{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+
+  /* cards */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px;margin-bottom:12px;
+  }
+  .card h3{margin:0 0 4px;font-size:15.5px;font-weight:600;}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .muted{color:var(--ink-soft);font-size:12.5px;}
+  .tag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px;
+  }
+  .tag.gold{background:var(--gold-pale);color:#8A5F1D;}
+  .tag.teal{background:var(--teal-pale);color:var(--teal);}
+  .tag.indigo{background:var(--indigo-pale);color:var(--indigo);}
+
+  .bar-track{height:6px;background:var(--indigo-pale);border-radius:99px;overflow:hidden;margin-top:8px;}
+  .bar-fill{height:100%;background:var(--gold);border-radius:99px;}
+
+  .search-box{
+    display:flex;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:11px;padding:10px 12px;
+    background:var(--card);margin-bottom:14px;
+  }
+  .search-box svg{width:17px;height:17px;color:var(--ink-soft);flex-shrink:0;}
+  .search-box input{border:none;outline:none;font-size:13.5px;width:100%;font-family:inherit;background:transparent;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--indigo);color:#fff;border:none;border-radius:10px;
+    padding:10px 16px;font-size:13.5px;font-weight:600;
+  }
+  .btn.ghost{background:transparent;color:var(--indigo);border:1px solid var(--indigo);}
+  .btn.block{width:100%;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;
+    padding:9px 11px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+
+  /* skill pills */
+  .pill-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+  .pill{font-size:12px;padding:5px 10px;border-radius:8px;background:var(--indigo-pale);color:var(--indigo);font-weight:500;}
+
+  /* story feed */
+  .story-head{display:flex;gap:10px;align-items:center;margin-bottom:9px;}
+  .avatar-ring{
+    width:42px;height:42px;border-radius:50%;background:var(--teal-pale);
+    color:var(--teal);display:flex;align-items:center;justify-content:center;
+    font-family:'Newsreader',serif;font-weight:600;font-size:16px;flex-shrink:0;
+  }
+  .story-head .who{font-size:14px;font-weight:600;}
+  .story-head .role{font-size:12px;color:var(--ink-soft);}
+  .story-text{font-family:'Newsreader',serif;font-size:14.5px;line-height:1.55;color:#3B362C;margin:0 0 8px;}
+
+  /* accordion */
+  .accordion{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+  .acc-q{
+    width:100%;text-align:left;background:#fff;border:none;padding:13px 14px;
+    display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600;
+  }
+  .acc-q svg{width:16px;height:16px;color:var(--ink-soft);transition:transform .2s ease;flex-shrink:0;}
+  .acc-a{max-height:0;overflow:hidden;transition:max-height .22s ease;background:#FBF9F4;}
+  .acc-a p{margin:0;padding:0 14px 14px;font-size:13px;color:var(--ink-soft);line-height:1.55;}
+  .accordion.open .acc-a{max-height:200px;}
+  .accordion.open .acc-q svg{transform:rotate(180deg);}
+
+  /* profile */
+  .profile-hero{text-align:center;padding:6px 0 18px;}
+  .profile-avatar{
+    width:78px;height:78px;border-radius:50%;background:var(--indigo);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-family:'Newsreader',serif;font-size:28px;font-weight:600;margin:0 auto 10px;
+  }
+  .profile-hero h2{margin:0;font-size:19px;}
+  .profile-hero .role{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .info-cell{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 12px;}
+  .info-cell .l{font-size:11px;color:var(--ink-soft);margin-bottom:2px;}
+  .info-cell .v{font-size:13.5px;font-weight:600;}
+  .list-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:13px 4px;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:500;
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item .l-left{display:flex;align-items:center;gap:11px;}
+  .list-item svg{width:17px;height:17px;color:var(--indigo);}
+  .list-item .chev{width:15px;height:15px;color:var(--ink-soft);}
+  .logout{color:#B23A3A;}
+  .logout svg{color:#B23A3A;}
+
+  /* subtab panels */
+  .sub-panel{display:none;}
+  .sub-panel.active{display:block;}
+
+  /* ---------- Accessibility polish ---------- */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--gold); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Roadmap CTA / recommendation banner ---------- */
+  .rm-cta{
+    text-align:center;padding:30px 20px;
+  }
+  .rm-cta .rm-icon{
+    width:52px;height:52px;border-radius:14px;background:var(--indigo-pale);color:var(--indigo);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  }
+  .rm-cta .rm-icon svg{width:26px;height:26px;}
+  .rm-cta h3{font-family:'Newsreader',serif;font-size:19px;margin:0 0 8px;}
+  .rm-cta p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 18px;max-width:380px;margin-left:auto;margin-right:auto;}
+  .banner-card{background:var(--indigo-pale);border-color:var(--indigo-pale);}
+  .ai-badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+    color:var(--indigo);background:var(--indigo-pale);padding:4px 10px;border-radius:999px;margin-bottom:8px;
+  }
+  .ai-badge svg{width:12px;height:12px;}
+
+  /* ---------- Roadmap results ---------- */
+  .rm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .rm-head h2{margin:0 0 4px;font-size:20px;}
+  .rm-summary-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .rm-stat{
+    background:var(--card);border:1px solid var(--line);border-radius:11px;
+    padding:9px 13px;font-size:12px;color:var(--ink-soft);
+  }
+  .rm-stat b{display:block;font-size:14px;color:var(--ink);font-weight:600;font-family:'Newsreader',serif;}
+
+  .timeline{position:relative;padding-left:28px;margin-top:8px;}
+  .timeline::before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--line);}
+  .tl-item{position:relative;margin-bottom:16px;}
+  .tl-item:last-child{margin-bottom:0;}
+  .tl-dot{
+    position:absolute;left:-28px;top:3px;width:19px;height:19px;border-radius:50%;
+    background:var(--indigo);border:3px solid var(--indigo-pale);z-index:1;
+  }
+  .tl-week{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.2px;margin-bottom:2px;}
+  .tl-skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .resource-card{
+    display:flex;gap:10px;align-items:flex-start;background:#FBF9F4;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:12px;
+  }
+  .resource-icon{
+    width:30px;height:30px;border-radius:8px;background:var(--card);border:1px solid var(--line);
+    color:var(--indigo);display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .resource-icon svg{width:15px;height:15px;}
+  .resource-card .rc-name{font-size:13px;font-weight:600;margin:0 0 2px;}
+  .resource-card .rc-note{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;}
+  .resource-card .rc-type{font-size:10.5px;font-weight:700;color:var(--teal);margin:0 0 3px;}
+
+  .track-switch{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+
+  /* ---------- Interest / profile pills ---------- */
+  .interest-pill{
+    font-size:12px;padding:6px 11px;border-radius:8px;background:var(--teal-pale);
+    color:var(--teal);font-weight:600;
+  }
+
+  /* ---------- Wizard modal ---------- */
+  .wiz-scrim{
+    position:fixed;inset:0;background:rgba(32,28,22,0.5);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:50;
+  }
+  .wiz-scrim.show{opacity:1;pointer-events:auto;}
+  .wizard{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);
+    width:92%;max-width:460px;max-height:86vh;background:var(--card);
+    border-radius:18px;box-shadow:0 30px 70px -20px rgba(32,28,22,.45);
+    z-index:51;display:flex;flex-direction:column;opacity:0;pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .wizard.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);}
+  .wiz-head{padding:18px 18px 0;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .wiz-progress{flex:1;height:5px;background:var(--indigo-pale);border-radius:99px;overflow:hidden;}
+  .wiz-progress-fill{height:100%;width:20%;background:var(--gold);border-radius:99px;transition:width .3s ease;}
+  .wiz-close{background:none;border:none;font-size:22px;line-height:1;color:var(--ink-soft);padding:2px 6px;border-radius:8px;}
+  .wiz-close:hover{background:var(--indigo-pale);color:var(--indigo);}
+  .wiz-body{padding:18px 22px 6px;overflow-y:auto;flex:1;min-height:220px;}
+  .wiz-step{display:none;}
+  .wiz-step.active{display:block;}
+  .wiz-title{font-family:'Newsreader',serif;font-size:19px;font-weight:600;margin:2px 0 6px;}
+  .wiz-sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;line-height:1.55;}
+  .opt-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .opt-chip{
+    padding:9px 14px;border-radius:11px;border:1px solid var(--line);background:#fff;
+    font-size:13.5px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .opt-chip.selected{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+  .skill-row{display:flex;gap:8px;margin-bottom:4px;}
+  .skill-row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:inherit;}
+  .skill-row select{border:1px solid var(--line);border-radius:10px;padding:9px 8px;font-size:13px;font-family:inherit;background:#fff;}
+  .skill-list{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 0;}
+  .skill-pill{
+    display:flex;align-items:center;gap:7px;background:var(--teal-pale);color:var(--teal);
+    font-size:12px;font-weight:600;padding:6px 6px 6px 11px;border-radius:8px;
+  }
+  .skill-pill button{background:none;border:none;color:var(--teal);font-size:15px;line-height:1;padding:0 2px;}
+  .review-grid{display:flex;flex-direction:column;gap:8px;}
+  .review-row{
+    display:flex;justify-content:space-between;gap:10px;padding:10px 12px;
+    background:#FBF9F4;border:1px solid var(--line);border-radius:10px;font-size:13px;
+  }
+  .review-row .k{color:var(--ink-soft);flex-shrink:0;}
+  .review-row .v{font-weight:600;text-align:right;}
+  .wiz-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 22px 18px;border-top:1px solid var(--line);flex-shrink:0;
+  }
+  .wizard.loading .wiz-foot{display:none;}
+  .wiz-stepcount{font-size:11.5px;color:var(--ink-soft);}
+  .wiz-hint{font-size:11.5px;color:var(--ink-soft);margin-top:8px;}
+
+  .wiz-loading{text-align:center;padding:30px 6px 14px;}
+  .loader-ring{
+    width:52px;height:52px;border-radius:50%;border:4px solid var(--indigo-pale);
+    border-top-color:var(--indigo);margin:0 auto 18px;animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-msg{font-size:13.5px;color:var(--ink-soft);min-height:20px;}
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    position:absolute;left:0;right:0;bottom:0;
+    background:var(--card);border-top:1px solid var(--line);
+    display:flex;padding:8px 4px 10px;z-index:20;flex-shrink:0;
+  }
+  .bottom-nav button{
+    flex:1;background:none;border:none;display:flex;flex-direction:column;
+    align-items:center;gap:4px;padding:6px 2px;color:var(--ink-soft);
+  }
+  .bottom-nav button svg{width:21px;height:21px;}
+  .bottom-nav button span{font-size:10.5px;font-weight:600;}
+  .bottom-nav button.active{color:var(--indigo);}
+  .bottom-nav button.active svg{color:var(--indigo);}
+
+  /* ---------- Card grids (reflow to multi-column on wider screens) ---------- */
+  .card-grid .card{margin-bottom:12px;}
+
+  /* ---------- Tablet and up: cap line length, breathing room ---------- */
+  @media (min-width:640px){
+    .content{max-width:640px;margin:0 auto;padding:22px 24px 90px;}
+    .topbar{padding:16px 24px 12px;}
+  }
+
+  /* ---------- Desktop: permanent sidebar, no bottom nav, multi-column cards ---------- */
+  @media (min-width:900px){
+    .phone{flex-direction:row;max-width:1320px;margin:0 auto;}
+    #menuBtn{display:none;}
+    .scrim{display:none;}
+    .drawer{
+      position:static;transform:none;width:260px;flex-shrink:0;
+      min-height:100vh;min-height:100dvh;border-right:1px solid rgba(239,233,230,0.14);
+    }
+    .bottom-nav{display:none;}
+    .content{max-width:1080px;padding:30px 40px 60px;}
+    .topbar{padding:18px 32px;}
+    .wordmark{display:none;}
+    .notif-pop{top:58px;right:32px;}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px,1fr));gap:16px;}
+    .card-grid .card{margin-bottom:0;}
+    .info-grid{grid-template-columns:repeat(4,1fr);}
+    .profile-hero{text-align:left;display:flex;align-items:center;gap:16px;padding:4px 0 22px;}
+    .profile-hero .profile-avatar{margin:0;}
+  }
+</style>
+
+<style id="skillsync-functional-css">
+.modal-functional{position:fixed;inset:0;background:rgba(20,18,14,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:18px}.modal-functional.show{display:flex}.modal-box{background:#fff;width:min(720px,96vw);max-height:88vh;overflow:auto;border-radius:18px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.modal-box h2{margin:0 0 6px}.modal-close{float:right;border:0;background:var(--indigo-pale);border-radius:9px;padding:7px 11px;font-size:18px}.daily-grid{display:grid;gap:8px;margin-top:14px}.daily-item{padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fbf9f4}.daily-item b{font-size:12px;color:var(--gold)}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--indigo);color:#fff;padding:11px 16px;border-radius:10px;z-index:150;display:none;font-size:13px}.toast.show{display:block}.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.edit-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div>
+  <div class="phone">
+
+    <!-- Sidebar (drawer on mobile, permanent nav on desktop) -->
+    <div class="scrim" id="scrim"></div>
+    <div class="drawer" id="drawer">
+      <div class="drawer-head">
+        <div class="name">SkillSync</div>
+        <div class="tag">Bridging skills and industry</div>
+      </div>
+      <nav>
+        <a href="#" data-nav="1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/></svg>
+          Industry Demand
+        </a>
+        <a href="#" data-nav="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.35 4.87 5.15.72-3.75 3.7.9 5.24L12 15.6l-4.65 2.43.9-5.24-3.75-3.7 5.15-.72L12 3.5Z"/></svg>
+          Career Spotlight
+        </a>
+        <a href="#" data-nav="3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 8.5 12 13l10-4.5L12 4Z"/><path d="M6 10.5v4.7c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.7"/></svg>
+          Internships
+        </a>
+        <a href="#" data-nav="4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4v-10Z"/><path d="M12 9.2c0-1 .9-1.4 1.5-1.7.6-.3 1-.6 1-1.2 0-.7-.7-1.2-1.5-1.2s-1.4.4-1.6 1"/><circle cx="12" cy="12.3" r=".55" fill="currentColor" stroke="none"/></svg>
+          Q&amp;A
+        </a>
+        <a href="#" data-nav="5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+          Profile
+        </a>
+        <div class="sep"></div>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l2.6 2.6"/></svg>About SkillSync</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4h3l.4 2.3a6.6 6.6 0 0 1 1.9 1.1l2.2-.8 1.5 2.6-1.8 1.5c.07.4.1.8.1 1.3s-.03.9-.1 1.3l1.8 1.5-1.5 2.6-2.2-.8a6.6 6.6 0 0 1-1.9 1.1L13.5 20h-3l-.4-2.3a6.6 6.6 0 0 1-1.9-1.1l-2.2.8-1.5-2.6 1.8-1.5A6.9 6.9 0 0 1 6.2 12c0-.5.03-.9.1-1.3L4.5 9.2 6 6.6l2.2.8a6.6 6.6 0 0 1 1.9-1.1L10.5 4Z"/><circle cx="12" cy="12" r="2.6"/></svg>Settings</a>
+      </nav>
+      <div class="drawer-foot">SkillSync — a Skill Development &amp; Industry Alignment initiative, Govt. of Maharashtra (prototype)</div>
+    </div>
+
+    <div class="main-col">
+    <!-- Top bar -->
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="wordmark">SkillSync</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="bellBtn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M9.5 18a2.5 2.5 0 0 0 5 0"/></svg>
+          <span class="dot"></span>
+        </button>
+        <button class="icon-btn avatar-btn" id="avatarBtn" aria-label="Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification popover -->
+    <div class="notif-pop" id="notifPop">
+      <div class="np-head">Notifications</div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p><b>Vertex Technologies</b> is now hiring for skills matching your profile.</p><div class="t">2 hours ago</div></div></div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p>Your question in Q&amp;A was answered by an expert.</p><div class="t">Yesterday</div></div></div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p>New internship openings added for Data Analytics.</p><div class="t">2 days ago</div></div></div>
+    </div>
+
+    <!-- Content -->
+    <main class="content" id="content">
+
+      <!-- PANEL 1 — Industry Demand -->
+      <section class="panel" id="panel-1">
+        <h1 class="panel-title">Industry Demand</h1>
+        <p class="panel-sub">See what companies are actually hiring for, and where you stand.</p>
+
+        <div class="chip-row" id="chips1">
+          <button class="chip active" data-sub="roadmap">My Roadmap</button>
+          <button class="chip" data-sub="courses">Courses</button>
+          <button class="chip" data-sub="coursedemand">Course Demand by Company</button>
+          <button class="chip" data-sub="skilldemand">Skill Demand by Company</button>
+          <button class="chip" data-sub="experience">Experience Edge</button>
+          <button class="chip" data-sub="achievements">Achievements</button>
+        </div>
+
+        <!-- My Roadmap (AI-assisted, personalised) -->
+        <div class="sub-panel active" data-panel="roadmap">
+          <div id="roadmapEmpty">
+            <div class="card rm-cta">
+              <div class="rm-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>
+              </div>
+              <h3>Get a roadmap built around you</h3>
+              <p>Tell us what you've studied, what you're interested in, the skills you already have, and how much time you can give. SkillSync AI will match you to the right courses and tell you whether YouTube, an offline institute, or a college programme suits you best.</p>
+              <button class="btn" id="btnStartWizard" type="button">Start my roadmap →</button>
+            </div>
+          </div>
+          <div id="roadmapContent" hidden></div>
+        </div>
+
+        <!-- Courses -->
+        <div class="sub-panel" data-panel="courses">
+          <div class="card banner-card" id="recommendedBanner" hidden>
+            <div class="row-between">
+              <div><h3 style="margin-bottom:2px;">Recommended for you</h3><p class="muted" style="margin:0;" id="recommendedBannerText"></p></div>
+              <button class="btn" data-goto-roadmap type="button">View roadmap</button>
+            </div>
+          </div>
+          <div class="card" id="genericCta">
+            <h3>Want a personalised plan instead?</h3>
+            <p class="muted" style="margin:0 0 10px;">Answer a few quick questions and get a step-by-step roadmap matched to your interests and time.</p>
+            <button class="btn block" data-goto-roadmap type="button">Get my roadmap</button>
+          </div>
+
+          <h3 style="margin:18px 0 10px;font-size:14.5px;">Trending courses right now</h3>
+          <div class="card-grid">
+            <div class="card">
+              <div class="row-between"><h3>Full-Stack Web Development</h3><span class="tag gold">High demand</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:86%;"></div></div>
+              <p class="muted" style="margin-top:8px;">Demanded by 340+ listed companies this quarter</p>
+            </div>
+            <div class="card">
+              <div class="row-between"><h3>Data Analytics &amp; Visualisation</h3><span class="tag gold">High demand</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:78%;"></div></div>
+              <p class="muted" style="margin-top:8px;">Demanded by 265+ listed companies this quarter</p>
+            </div>
+            <div class="card">
+              <div class="row-between"><h3>Industrial Automation (PLC/SCADA)</h3><span class="tag teal">Rising</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:54%;"></div></div>
+              <p class="muted" style="margin-top:8px;">Demanded by 140+ listed companies this quarter</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course demand by company -->
+        <div class="sub-panel" data-panel="coursedemand">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
+            <input type="text" placeholder="Search a company, e.g. Vertex Technologies" />
+          </div>
+          <div class="card">
+            <div class="row-between" style="margin-bottom:10px;"><h3>Vertex Technologies</h3><span class="tag indigo">IT Services</span></div>
+            <p class="muted" style="margin:0 0 8px;">Top courses this company is hiring for:</p>
+            <div class="pill-wrap">
+              <span class="pill">Full-Stack Development</span>
+              <span class="pill">Cloud Computing</span>
+              <span class="pill">DevOps</span>
+              <span class="pill">QA Automation</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill demand by company -->
+        <div class="sub-panel" data-panel="skilldemand">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
+            <input type="text" placeholder="Search a company, e.g. Sahyadri Manufacturing" />
+          </div>
+          <div class="card">
+            <div class="row-between" style="margin-bottom:10px;"><h3>Sahyadri Manufacturing</h3><span class="tag indigo">Industrial</span></div>
+            <p class="muted" style="margin:0 0 8px;">Most in-demand skills at this company:</p>
+            <div class="pill-wrap">
+              <span class="pill">CNC Machining</span>
+              <span class="pill">Quality Control</span>
+              <span class="pill">Lean Manufacturing</span>
+              <span class="pill">AutoCAD</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Experience edge -->
+        <div class="sub-panel" data-panel="experience">
+          <div class="card">
+            <h3>Why experience matters here</h3>
+            <p class="muted" style="margin:8px 0 0;line-height:1.6;">If you already have work experience — even from another company or field — it strengthens your visibility to recruiters browsing SkillSync. This section highlights that edge on your profile.</p>
+          </div>
+          <div class="card">
+            <div class="row-between"><h3>Add your experience</h3><span class="tag teal">Boosts profile</span></div>
+            <div class="field" style="margin-top:10px;"><label>Company &amp; role</label><input type="text" placeholder="e.g. Junior Analyst, Nimbus Cloud Solutions" /></div>
+            <div class="field"><label>Duration</label><input type="text" placeholder="e.g. 1 year 4 months" /></div>
+            <button class="btn ghost block">Save to profile</button>
+          </div>
+        </div>
+
+        <!-- Achievements -->
+        <div class="sub-panel" data-panel="achievements">
+          <div class="card">
+            <h3>Achievements give you an edge too</h3>
+            <p class="muted" style="margin:8px 0 0;line-height:1.6;">Hackathon wins, competitive exam ranks, and certifications are optional — but they help your profile stand out to recruiters and training providers.</p>
+          </div>
+          <div class="card">
+            <div class="row-between"><h3>Add an achievement</h3><span class="tag gold">Optional</span></div>
+            <div class="field" style="margin-top:10px;"><label>Title</label><input type="text" placeholder="e.g. Smart India Hackathon — Finalist" /></div>
+            <button class="btn ghost block">Add to profile</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 2 — Career Spotlight -->
+      <section class="panel" id="panel-2" hidden>
+        <h1 class="panel-title">Career Spotlight</h1>
+        <p class="panel-sub">Real journeys from people working at top roles — what they studied, what actually got them there.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <div class="story-head">
+              <div class="avatar-ring">RS</div>
+              <div><div class="who">Riya Sawant</div><div class="role">Senior Data Analyst · Orbit Fintech · 5 yrs</div></div>
+            </div>
+            <p class="story-text">"I switched from a mechanical engineering background into analytics through a 6-month certification. What actually got me hired wasn't the certificate — it was a portfolio of real dashboards I'd built on public datasets."</p>
+            <div class="row-between"><span class="tag teal">₹11–14 LPA range</span><button class="btn ghost">Read full story</button></div>
+          </div>
+
+          <div class="card">
+            <div class="story-head">
+              <div class="avatar-ring">AK</div>
+              <div><div class="who">Aman Kulkarni</div><div class="role">Production Supervisor · Sahyadri Manufacturing · 8 yrs</div></div>
+            </div>
+            <p class="story-text">"Diploma holders are often overlooked, but shop-floor experience plus a Lean Manufacturing certification moved me into supervision within three years."</p>
+            <div class="row-between"><span class="tag teal">₹6–8 LPA range</span><button class="btn ghost">Read full story</button></div>
+          </div>
+
+          <div class="card">
+            <div class="story-head">
+              <div class="avatar-ring">PN</div>
+              <div><div class="who">Priya Nair</div><div class="role">DevOps Lead · Vertex Technologies · 6 yrs</div></div>
+            </div>
+            <p class="story-text">"I started as a QA tester. The skill that actually moved my career was cloud infrastructure — I taught myself, then found a mentor inside the company."</p>
+            <div class="row-between"><span class="tag teal">₹18–22 LPA range</span><button class="btn ghost">Read full story</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 3 — Internships -->
+      <section class="panel" id="panel-3" hidden>
+        <h1 class="panel-title">Internships</h1>
+        <p class="panel-sub">Which companies are actually taking interns, and from where.</p>
+
+        <div class="chip-row">
+          <button class="chip active">All sectors</button>
+          <button class="chip">IT</button>
+          <button class="chip">Manufacturing</button>
+          <button class="chip">Finance</button>
+          <button class="chip">Agriculture</button>
+        </div>
+
+        <div class="card-grid">
+          <div class="card">
+            <div class="row-between"><h3>Vertex Technologies</h3><span class="tag gold">Hiring now</span></div>
+            <p class="muted" style="margin:6px 0 10px;">Avg. 45 interns / year · 210 students placed to date</p>
+            <p class="muted" style="margin:0 0 6px;font-weight:600;color:var(--ink);">Colleges they visit most:</p>
+            <div class="pill-wrap"><span class="pill">COEP Pune</span><span class="pill">VJTI Mumbai</span><span class="pill">PICT</span></div>
+          </div>
+
+          <div class="card">
+            <div class="row-between"><h3>Bhoomi Agritech</h3><span class="tag teal">Open</span></div>
+            <p class="muted" style="margin:6px 0 10px;">Avg. 12 interns / year · 38 students placed to date</p>
+            <p class="muted" style="margin:0 0 6px;font-weight:600;color:var(--ink);">Colleges they visit most:</p>
+            <div class="pill-wrap"><span class="pill">MPKV Rahuri</span><span class="pill">College of Agriculture, Pune</span></div>
+          </div>
+
+          <div class="card">
+            <div class="row-between"><h3>Orbit Fintech</h3><span class="tag indigo">Seasonal</span></div>
+            <p class="muted" style="margin:6px 0 10px;">Avg. 20 interns / year · 96 students placed to date</p>
+            <p class="muted" style="margin:0 0 6px;font-weight:600;color:var(--ink);">Colleges they visit most:</p>
+            <div class="pill-wrap"><span class="pill">Fergusson College</span><span class="pill">Symbiosis</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 4 — Q&A -->
+      <section class="panel" id="panel-4" hidden>
+        <h1 class="panel-title">Q&amp;A</h1>
+        <p class="panel-sub">Ask a question or browse what's already been answered.</p>
+
+        <div class="chip-row" id="chips4">
+          <button class="chip active" data-sub4="expert">Ask an Expert</button>
+          <button class="chip" data-sub4="faq">FAQs</button>
+        </div>
+
+        <div class="sub-panel active" data-panel4="expert">
+          <button class="btn block" style="margin-bottom:14px;">+ Ask a new question</button>
+          <div class="card-grid">
+            <div class="card">
+              <div class="row-between"><h3>Is a diploma enough for a core manufacturing role?</h3><span class="tag teal">Answered</span></div>
+              <p class="muted" style="margin-top:6px;">Answered by <b>Aman Kulkarni</b>, Production Supervisor</p>
+            </div>
+            <div class="card">
+              <div class="row-between"><h3>Which cloud certification do recruiters actually check for?</h3><span class="tag gold">Pending</span></div>
+              <p class="muted" style="margin-top:6px;">Waiting for an expert response</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sub-panel" data-panel4="faq">
+          <div class="accordion">
+            <button class="acc-q">How is "in-demand" calculated for a skill? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-a"><p>We aggregate skill mentions from employer postings and hiring requests submitted on SkillSync, weighted by how recently they were posted.</p></div>
+          </div>
+          <div class="accordion">
+            <button class="acc-q">Is SkillSync free to use for students? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-a"><p>Yes. Student and job-seeker accounts are completely free. Only institutional/employer accounts may have verification steps.</p></div>
+          </div>
+          <div class="accordion">
+            <button class="acc-q">Can training institutes use this data too? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-a"><p>Yes — that's a core part of the platform. Institutes get an aggregated view of skill gaps to help plan or update curricula.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 5 — Profile -->
+      <section class="panel" id="panel-5" hidden>
+        <div class="profile-hero">
+          <div class="profile-avatar" id="profAvatar">?</div>
+          <h2 id="profName">Your profile</h2>
+          <div class="role" id="profRole">Take the roadmap assessment to fill this in</div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-cell"><div class="l">Field of study</div><div class="v" id="profField">—</div></div>
+          <div class="info-cell"><div class="l">Education level</div><div class="v" id="profLevel">—</div></div>
+          <div class="info-cell"><div class="l">Time available</div><div class="v" id="profTime">—</div></div>
+          <div class="info-cell"><div class="l">Preferred mode</div><div class="v" id="profMode">—</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;" id="profInterestsCard" hidden>
+          <h3 style="margin-bottom:8px;">Interested in</h3>
+          <div class="pill-wrap" id="profInterests"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;" id="profSkillsCard" hidden>
+          <h3 style="margin-bottom:8px;">Skills you already have</h3>
+          <div class="pill-wrap" id="profSkills"></div>
+        </div>
+
+        <div class="card" id="profileEditCard" style="margin-bottom:14px;">
+  <h3>Edit credentials</h3>
+  <div class="field"><label>Name</label><input id="editName" /></div>
+  <div class="field"><label>Field / course</label><input id="editField" placeholder="e.g. Electrical Engineering" /></div>
+  <div class="field"><label>Education level</label><select id="editLevel"><option value="10th">10th</option><option value="12th">12th</option><option value="iti">ITI</option><option value="diploma">Diploma</option><option value="ug">Undergraduate</option><option value="pg">Postgraduate</option></select></div>
+  <button class="btn block" id="saveProfileEdit" type="button">Save credentials</button>
+</div>
+<button class="btn block" id="btnRetake" style="margin-bottom:18px;" type="button">Take / retake the roadmap assessment</button>
+
+        <div class="card">
+          <div class="list-item">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l5 5v11H6V4Z"/><path d="M15 4v5h5"/></svg>Saved courses</div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>My applications</div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4h3l.4 2.3a6.6 6.6 0 0 1 1.9 1.1l2.2-.8 1.5 2.6-1.8 1.5c.07.4.1.8.1 1.3s-.03.9-.1 1.3l1.8 1.5-1.5 2.6-2.2-.8a6.6 6.6 0 0 1-1.9 1.1L13.5 20h-3l-.4-2.3a6.6 6.6 0 0 1-1.9-1.1l-2.2.8-1.5-2.6 1.8-1.5A6.9 6.9 0 0 1 6.2 12c0-.5.03-.9.1-1.3L4.5 9.2 6 6.6l2.2.8a6.6 6.6 0 0 1 1.9-1.1L10.5 4Z"/><circle cx="12" cy="12" r="2.6"/></svg>Account settings</div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item logout">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>Log out</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button data-tab="1" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/></svg>
+        <span>Demand</span>
+      </button>
+      <button data-tab="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.35 4.87 5.15.72-3.75 3.7.9 5.24L12 15.6l-4.65 2.43.9-5.24-3.75-3.7 5.15-.72L12 3.5Z"/></svg>
+        <span>Spotlight</span>
+      </button>
+      <button data-tab="3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 8.5 12 13l10-4.5L12 4Z"/><path d="M6 10.5v4.7c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.7"/></svg>
+        <span>Interns</span>
+      </button>
+      <button data-tab="4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4v-10Z"/></svg>
+        <span>Q&amp;A</span>
+      </button>
+      <button data-tab="5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+    </div>
+
+  </div>
+
+  <!-- Roadmap wizard -->
+  <div class="wiz-scrim" id="wizScrim"></div>
+  <div class="wizard" id="wizard" role="dialog" aria-modal="true" aria-label="Build my roadmap">
+    <div class="wiz-head">
+      <div class="wiz-progress"><div class="wiz-progress-fill" id="wizProgressFill"></div></div>
+      <button class="wiz-close" id="wizClose" aria-label="Close" type="button">&times;</button>
+    </div>
+    <div class="wiz-body" id="wizBody">
+
+      <div class="wiz-step active" data-step="1">
+        <h2 class="wiz-title">Let's start with you</h2>
+        <p class="wiz-sub">A few basics so everything that follows is built around you.</p>
+        <div class="field"><label>Your name</label><input type="text" id="inpName" placeholder="e.g. Rohan Shinde" /></div>
+        <div class="field">
+          <label>Education level</label>
+          <div class="opt-grid" id="grpLevel">
+            <button class="opt-chip" data-val="10th" type="button">10th</button>
+            <button class="opt-chip" data-val="12th" type="button">12th</button>
+            <button class="opt-chip" data-val="iti" type="button">ITI</button>
+            <button class="opt-chip" data-val="diploma" type="button">Diploma</button>
+            <button class="opt-chip" data-val="ug" type="button">Undergraduate</button>
+            <button class="opt-chip" data-val="pg" type="button">Postgraduate</button>
+          </div>
+        </div>
+        <div class="field"><label>Field / course studied</label><input type="text" id="inpField" placeholder="e.g. Computer Engineering, Commerce, Mechanical" /></div>
+      </div>
+
+      <div class="wiz-step" data-step="2">
+        <h2 class="wiz-title">What are you interested in?</h2>
+        <p class="wiz-sub">Pick as many as genuinely interest you — we'll rank the best fit for you.</p>
+        <div class="opt-grid" id="grpInterests">
+          <button class="opt-chip" data-val="web" type="button">Web Development</button>
+          <button class="opt-chip" data-val="data" type="button">Data Analytics</button>
+          <button class="opt-chip" data-val="cloud" type="button">Cloud &amp; DevOps</button>
+          <button class="opt-chip" data-val="aiml" type="button">AI &amp; Machine Learning</button>
+          <button class="opt-chip" data-val="design" type="button">UI/UX &amp; Product Design</button>
+          <button class="opt-chip" data-val="core" type="button">Core / Manufacturing Engg.</button>
+          <button class="opt-chip" data-val="electronics" type="button">Electronics &amp; Embedded</button>
+          <button class="opt-chip" data-val="finance" type="button">Finance &amp; Accounting</button>
+          <button class="opt-chip" data-val="agri" type="button">Agriculture &amp; Agri-Tech</button>
+          <button class="opt-chip" data-val="health" type="button">Healthcare &amp; Allied Sciences</button>
+          <button class="opt-chip" data-val="marketing" type="button">Digital Marketing</button>
+          <button class="opt-chip" data-val="business" type="button">Entrepreneurship &amp; Business</button>
+        </div>
+      </div>
+
+      <div class="wiz-step" data-step="3">
+        <h2 class="wiz-title">What skills do you already have?</h2>
+        <p class="wiz-sub">Optional, but it helps us skip what you already know. Add each skill with your level, then tap Add.</p>
+        <div class="skill-row">
+          <input type="text" id="inpSkillName" placeholder="e.g. Excel, Python, AutoCAD" />
+          <select id="inpSkillLevel">
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+          <button class="btn" id="btnAddSkill" type="button">Add</button>
+        </div>
+        <div class="skill-list" id="skillList"></div>
+        <p class="wiz-hint">No existing skills? That's fine — skip ahead.</p>
+      </div>
+
+      <div class="wiz-step" data-step="4">
+        <h2 class="wiz-title">Time and learning style</h2>
+        <p class="wiz-sub">This decides how we pace your roadmap and which resources we suggest first.</p>
+        <div class="field">
+          <label>How much time can you give overall?</label>
+          <div class="opt-grid" id="grpTime">
+            <button class="opt-chip" data-val="2-4w" type="button">2–4 weeks</button>
+            <button class="opt-chip" data-val="1-3m" type="button">1–3 months</button>
+            <button class="opt-chip" data-val="3-6m" type="button">3–6 months</button>
+            <button class="opt-chip" data-val="6-12m" type="button">6–12 months</button>
+            <button class="opt-chip" data-val="1y+" type="button">1 year+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Hours per week you can realistically give</label>
+          <div class="opt-grid" id="grpHours">
+            <button class="opt-chip" data-val="<5" type="button">Under 5 hrs</button>
+            <button class="opt-chip" data-val="5-10" type="button">5–10 hrs</button>
+            <button class="opt-chip" data-val="10-20" type="button">10–20 hrs</button>
+            <button class="opt-chip" data-val="20+" type="button">20+ hrs</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>How do you prefer to learn?</label>
+          <div class="opt-grid" id="grpMode">
+            <button class="opt-chip" data-val="online" type="button">Online (self-paced videos/courses)</button>
+            <button class="opt-chip" data-val="offline" type="button">Offline classes / training institute</button>
+            <button class="opt-chip" data-val="college" type="button">College-integrated programme</button>
+            <button class="opt-chip" data-val="none" type="button">No preference — show best fit</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wiz-step" data-step="5">
+        <h2 class="wiz-title">Review your details</h2>
+        <p class="wiz-sub">Make sure this looks right before SkillSync AI builds your roadmap.</p>
+        <div class="review-grid" id="reviewGrid"></div>
+      </div>
+
+      <div class="wiz-step" data-step="loading">
+        <div class="wiz-loading">
+          <div class="loader-ring"></div>
+          <div class="wiz-title" style="font-size:16px;">SkillSync AI is analysing your profile</div>
+          <div class="loading-msg" id="loadingMsg">Reading your answers…</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="wiz-foot" id="wizFoot">
+      <button class="btn ghost" id="wizBack" type="button">Back</button>
+      <span class="wiz-stepcount" id="wizStepCount">Step 1 of 5</span>
+      <button class="btn" id="wizNext" type="button">Next</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Drawer
+  const drawer = document.getElementById('drawer');
+  const scrim = document.getElementById('scrim');
+  const menuBtn = document.getElementById('menuBtn');
+  function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('show'); }
+  menuBtn.addEventListener('click', () => { drawer.classList.add('open'); scrim.classList.add('show'); closeNotif(); });
+  scrim.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('a[data-nav]').forEach(a => {
+    a.addEventListener('click', (e) => { e.preventDefault(); switchTab(a.dataset.nav); closeDrawer(); });
+  });
+
+  // Notifications
+  const notifPop = document.getElementById('notifPop');
+  const bellBtn = document.getElementById('bellBtn');
+  function closeNotif(){ notifPop.classList.remove('show'); }
+  bellBtn.addEventListener('click', (e) => { e.stopPropagation(); notifPop.classList.toggle('show'); });
+  document.addEventListener('click', (e) => { if(!notifPop.contains(e.target) && e.target !== bellBtn) closeNotif(); });
+
+  // Avatar -> profile tab
+  document.getElementById('avatarBtn').addEventListener('click', () => switchTab('5'));
+
+  // Bottom nav tab switching
+  const navButtons = document.querySelectorAll('#bottomNav button');
+  const panels = document.querySelectorAll('.panel');
+  function switchTab(tab){
+    panels.forEach(p => p.hidden = (p.id !== 'panel-' + tab));
+    navButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('content').scrollTop = 0;
+  }
+  navButtons.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+  // Chips — panel 1 sub-tabs
+  const chips1 = document.querySelectorAll('#chips1 .chip');
+  const subs1 = document.querySelectorAll('#panel-1 .sub-panel');
+  chips1.forEach(c => c.addEventListener('click', () => {
+    chips1.forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    subs1.forEach(s => s.classList.toggle('active', s.dataset.panel === c.dataset.sub));
+  }));
+
+  // Chips — panel 4 sub-tabs
+  const chips4 = document.querySelectorAll('#chips4 .chip');
+  const subs4 = document.querySelectorAll('#panel-4 .sub-panel');
+  chips4.forEach(c => c.addEventListener('click', () => {
+    chips4.forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    subs4.forEach(s => s.classList.toggle('active', s.dataset.panel4 === c.dataset.sub4));
+  }));
+
+  // Accordion (FAQ)
+  document.querySelectorAll('.acc-q').forEach(btn => {
+    btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+  });
+
+  // Helper: activate a panel-1 chip/sub-panel by its data-sub value
+  function activateSub1(subName){
+    chips1.forEach(x => x.classList.toggle('active', x.dataset.sub === subName));
+    subs1.forEach(s => s.classList.toggle('active', s.dataset.panel === subName));
+  }
+  document.querySelectorAll('[data-goto-roadmap]').forEach(btn => {
+    btn.addEventListener('click', () => { switchTab('1'); activateSub1('roadmap'); });
+  });
+
+  /* =========================================================
+     SkillSync AI — roadmap matching engine (rule-based, runs
+     entirely in the browser — no data leaves this device).
+     ========================================================= */
+
+  const LEVEL_LABELS = {'10th':'10th standard','12th':'12th standard','iti':'ITI','diploma':'Diploma','ug':'Undergraduate','pg':'Postgraduate'};
+  const TIME_LABELS  = {'2-4w':'2–4 weeks','1-3m':'1–3 months','3-6m':'3–6 months','6-12m':'6–12 months','1y+':'1 year+'};
+  const HOURS_LABELS = {'<5':'Under 5 hrs/week','5-10':'5–10 hrs/week','10-20':'10–20 hrs/week','20+':'20+ hrs/week'};
+  const MODE_LABELS  = {'online':'Online / self-paced','offline':'Offline institute','college':'College-integrated','none':'No preference'};
+  const TIME_WEEKS   = {'2-4w':3,'1-3m':8,'3-6m':18,'6-12m':36,'1y+':52};
+  const STAGE_WEIGHTS = [1, 2, 2, 1.5, 1.5];
+
+  const TRACKS = {
+    web: { label:'Full-Stack Web Development', tagClass:'gold', keywords:['computer','it','information technology','software','cse','web','coding'],
+      stages:[
+        {title:'Foundations', focus:'Programming basics, HTML/CSS/JavaScript, and version control', skills:['HTML/CSS','JavaScript','Git basics']},
+        {title:'Core Framework Skills', focus:'A front-end framework, a back-end runtime, and databases', skills:['React or similar','Node.js/Express','SQL basics']},
+        {title:'Build a Portfolio Project', focus:'One full-stack project solving a real problem, deployed live', skills:['REST APIs','Deployment','Testing']},
+        {title:'Certification & Specialisation', focus:'A recognised certification to validate your skills', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, GitHub profile, mock interviews, and applying', skills:['Interview prep','Resume/portfolio']}
+      ]},
+    data: { label:'Data Analytics & Visualisation', tagClass:'gold', keywords:['computer','statistics','maths','commerce','economics','data'],
+      stages:[
+        {title:'Foundations', focus:'Excel, basic statistics, and SQL for querying data', skills:['Excel','SQL basics','Statistics']},
+        {title:'Core Tooling', focus:'Python or R for analysis, plus a BI/visualisation tool', skills:['Python/R','Power BI or Tableau']},
+        {title:'Build a Portfolio Project', focus:'An end-to-end analysis of a real public dataset with a dashboard', skills:['Data cleaning','Dashboards']},
+        {title:'Certification & Specialisation', focus:'A recognised data-analytics certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Case-study storytelling, resume, and mock interviews', skills:['Interview prep','Resume/portfolio']}
+      ]},
+    cloud: { label:'Cloud Computing & DevOps', tagClass:'teal', keywords:['computer','it','information technology','software','network','cloud'],
+      stages:[
+        {title:'Foundations', focus:'Linux basics, networking fundamentals, and one cloud platform overview', skills:['Linux basics','Networking']},
+        {title:'Core Tooling', focus:'Core services on one cloud provider, plus containers', skills:['Cloud provider basics','Docker']},
+        {title:'Build a Portfolio Project', focus:'Deploy and automate a real application end-to-end', skills:['CI/CD','Infra as code basics']},
+        {title:'Certification & Specialisation', focus:'An associate-level cloud certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, GitHub profile, and mock interviews', skills:['Interview prep','Resume/portfolio']}
+      ]},
+    aiml: { label:'AI & Machine Learning', tagClass:'gold', keywords:['computer','maths','statistics','ai','machine learning','data'],
+      stages:[
+        {title:'Foundations', focus:'Python, linear algebra/statistics refresher, and core ML concepts', skills:['Python','Statistics basics']},
+        {title:'Core Tooling', focus:'A ML library plus classic algorithms end-to-end', skills:['scikit-learn/pandas','Model evaluation']},
+        {title:'Build a Portfolio Project', focus:'One applied ML project solving a real problem', skills:['Data prep','Model deployment basics']},
+        {title:'Certification & Specialisation', focus:'A recognised ML/AI certification or specialised course', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Project writeups, resume, and mock interviews', skills:['Interview prep','Resume/portfolio']}
+      ]},
+    design: { label:'UI/UX & Product Design', tagClass:'teal', keywords:['design','arts','architecture','fine art'],
+      stages:[
+        {title:'Foundations', focus:'Design principles, typography, and a design tool', skills:['Design fundamentals','Figma basics']},
+        {title:'Core Skills', focus:'User research basics and wireframing to high-fidelity design', skills:['Wireframing','Prototyping']},
+        {title:'Build a Portfolio Project', focus:'One full case study — research, wireframes, final UI, and prototype', skills:['Case study writing']},
+        {title:'Certification & Specialisation', focus:'A recognised UX/UI certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Portfolio site, resume, and mock interviews', skills:['Interview prep','Portfolio']}
+      ]},
+    core: { label:'Core / Manufacturing Engineering', tagClass:'teal', keywords:['mechanical','production','manufacturing','iti','diploma','industrial'],
+      stages:[
+        {title:'Foundations', focus:'Engineering drawing, shop-floor safety, and machine basics', skills:['Engineering drawing','Safety practices']},
+        {title:'Core Skills', focus:'CNC/CAD tools and quality-control fundamentals', skills:['AutoCAD/CAD','Quality control basics']},
+        {title:'Hands-On Practice', focus:'Supervised shop-floor or lab practice on real equipment', skills:['Machine operation']},
+        {title:'Certification & Specialisation', focus:'A Lean Manufacturing or trade-specific certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, references, and interview practice', skills:['Interview prep','Resume']}
+      ]},
+    electronics: { label:'Electronics & Embedded Systems', tagClass:'teal', keywords:['electronics','electrical','embedded','instrumentation'],
+      stages:[
+        {title:'Foundations', focus:'Circuit basics, components, and a microcontroller platform', skills:['Circuit basics','Microcontroller basics']},
+        {title:'Core Skills', focus:'Embedded programming and PCB/tool fundamentals', skills:['Embedded C','PCB basics']},
+        {title:'Build a Portfolio Project', focus:'One working hardware/embedded project end-to-end', skills:['Prototyping','Debugging']},
+        {title:'Certification & Specialisation', focus:'A recognised embedded-systems certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Project documentation, resume, and interviews', skills:['Interview prep','Resume/portfolio']}
+      ]},
+    finance: { label:'Finance & Accounting', tagClass:'gold', keywords:['commerce','finance','accounting','economics','bcom','bba'],
+      stages:[
+        {title:'Foundations', focus:'Accounting basics, Excel, and financial statements', skills:['Accounting basics','Excel']},
+        {title:'Core Skills', focus:'Financial analysis, taxation basics, and one finance tool', skills:['Financial analysis','Tally/ERP basics']},
+        {title:'Applied Practice', focus:'A real-world case study — budgeting, analysis, or audit exercise', skills:['Case study work']},
+        {title:'Certification & Specialisation', focus:'A recognised finance/accounting certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, aptitude prep, and mock interviews', skills:['Interview prep','Resume']}
+      ]},
+    agri: { label:'Agriculture & Agri-Tech', tagClass:'teal', keywords:['agriculture','agri','horticulture','farming'],
+      stages:[
+        {title:'Foundations', focus:'Modern agronomy basics and farm-data fundamentals', skills:['Agronomy basics','Record keeping']},
+        {title:'Core Skills', focus:'Agri-tech tools — soil testing, irrigation tech, or farm software', skills:['Agri-tech tools']},
+        {title:'Applied Practice', focus:'A supervised field project or internship on a working farm/agri-business', skills:['Field practice']},
+        {title:'Certification & Specialisation', focus:'A government or institutional agri-tech certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, references, and interview practice', skills:['Interview prep','Resume']}
+      ]},
+    health: { label:'Healthcare & Allied Sciences', tagClass:'teal', keywords:['biology','health','medical','nursing','pharmacy','science'],
+      stages:[
+        {title:'Foundations', focus:'Core subject refresher and basic patient-care/lab practices', skills:['Subject refresher','Basic practices']},
+        {title:'Core Skills', focus:'Hands-on skills specific to your chosen allied-health path', skills:['Practical skills']},
+        {title:'Supervised Practice', focus:'Supervised clinical/lab placement hours', skills:['Clinical practice']},
+        {title:'Certification & Specialisation', focus:'A recognised allied-health certification or licence', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Resume, references, and interview practice', skills:['Interview prep','Resume']}
+      ]},
+    marketing: { label:'Digital Marketing', tagClass:'gold', keywords:['marketing','commerce','mass media','journalism','communication'],
+      stages:[
+        {title:'Foundations', focus:'Marketing fundamentals, SEO basics, and content writing', skills:['Marketing basics','SEO basics']},
+        {title:'Core Skills', focus:'Paid ads, analytics, and social media strategy', skills:['Analytics tools','Social strategy']},
+        {title:'Build a Portfolio Project', focus:'Run one real (or simulated) campaign end-to-end', skills:['Campaign planning']},
+        {title:'Certification & Specialisation', focus:'A recognised digital-marketing certification', skills:['Chosen certification']},
+        {title:'Job-Ready Polish', focus:'Portfolio, resume, and mock interviews', skills:['Interview prep','Portfolio']}
+      ]},
+    business: { label:'Entrepreneurship & Business', tagClass:'indigo', keywords:['business','commerce','management','bba','entrepreneurship'],
+      stages:[
+        {title:'Foundations', focus:'Business fundamentals and idea validation', skills:['Business basics','Idea validation']},
+        {title:'Core Skills', focus:'Business planning, basic finance, and pitching', skills:['Business plan','Pitching']},
+        {title:'Applied Practice', focus:'Build and test a small real or simulated venture', skills:['Execution practice']},
+        {title:'Certification & Specialisation', focus:'An incubator programme or entrepreneurship certification', skills:['Chosen certification/incubator']},
+        {title:'Job-Ready Polish', focus:'Pitch deck, resume, and interview/pitch practice', skills:['Interview/pitch prep']}
+      ]}
+  };
+
+  function buildResource(mode, trackLabel, stage){
+    const templates = {
+      online: {
+        type:'Online',
+        name:`A structured "${stage.title}" video series on ${trackLabel}`,
+        note:`Free, self-paced playlists covering ${stage.focus.toLowerCase()}. Good if you learn best by watching and practising along at your own pace.`
+      },
+      offline: {
+        type:'Offline institute',
+        name:`A local skill-development / training centre`,
+        note:`Look for a Skill India, ITI, or private training institute near you running a batch on ${stage.title.toLowerCase()} for ${trackLabel.toLowerCase()} — hands-on lab time is the main advantage here.`
+      },
+      college: {
+        type:'College programme',
+        name:`A college-integrated or polytechnic add-on course`,
+        note:`Check if your college, a nearby polytechnic, or a government institute offers a credit course or certification covering ${stage.title.toLowerCase()}.`
+      }
+    };
+    return templates[mode] || templates.online;
+  }
+
+  function matchTracks(profile){
+    const scores = {};
+    Object.keys(TRACKS).forEach(k => scores[k] = 0);
+    profile.interests.forEach(i => { if(scores[i] !== undefined) scores[i] += 3; });
+    const fieldLower = (profile.field || '').toLowerCase();
+    Object.entries(TRACKS).forEach(([k, t]) => {
+      t.keywords.forEach(kw => { if(fieldLower.includes(kw)) scores[k] += 1; });
+    });
+    profile.skills.forEach(s => {
+      Object.entries(TRACKS).forEach(([k, t]) => {
+        if(t.keywords.some(kw => s.name.toLowerCase().includes(kw))) scores[k] += 0.5;
+      });
+    });
+    let ranked = Object.entries(scores).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+    if(ranked.length === 0){
+      return [profile.interests[0] || 'web'];
+    }
+    return ranked.slice(0, 2).map(r => r[0]);
+  }
+
+  function buildRoadmap(trackKey, profile){
+    const track = TRACKS[trackKey];
+    const totalWeeks = TIME_WEEKS[profile.time] || 12;
+    const sumW = STAGE_WEIGHTS.reduce((a,b) => a+b, 0);
+    const defaultModes = ['online','offline','college','offline','college'];
+    const stages = track.stages.map((s, i) => {
+      const weeks = Math.max(1, Math.round(totalWeeks * STAGE_WEIGHTS[i] / sumW));
+      const mode = (profile.mode && profile.mode !== 'none') ? profile.mode : defaultModes[i];
+      const resource = buildResource(mode, track.label, s);
+      return Object.assign({}, s, {weeks, resource});
+    });
+    return {track, stages, totalWeeks};
+  }
+
+  const RESOURCE_ICONS = {
+    'Online': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M9 20h6M12 18v2"/></svg>',
+    'Offline institute': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 5l8 5.5-8 5.5-8-5.5Z"/><path d="M7 12.5V17c0 1 2.2 2 5 2s5-1 5-2v-4.5"/></svg>',
+    'College programme': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M6 10.5v5.5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5.5"/></svg>'
+  };
+
+  function esc(str){
+    const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+  }
+
+  function renderRoadmap(profile, matched){
+    const wrap = document.getElementById('roadmapContent');
+    const empty = document.getElementById('roadmapEmpty');
+    empty.hidden = true; wrap.hidden = false;
+
+    let switchHtml = '';
+    if(matched.length > 1){
+      switchHtml = `<div class="track-switch" id="trackSwitch">` +
+        matched.map((k,i) => `<button class="chip${i===0?' active':''}" data-track="${k}" type="button">${esc(TRACKS[k].label)}</button>`).join('') +
+        `</div>`;
+    }
+
+    wrap.innerHTML = `
+      <div class="ai-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>Built by SkillSync AI</div>
+      <div class="rm-head">
+        <div><h2>${profile.name ? esc(profile.name) + "'s roadmap" : 'Your roadmap'}</h2>
+        <p class="muted" style="margin:0;">Matched from ${profile.interests.length} interest${profile.interests.length===1?'':'s'} and your ${TIME_LABELS[profile.time] || 'available time'}.</p></div>
+        <button class="btn ghost" id="btnRetakeInline" type="button">Retake</button>
+      </div>
+      ${switchHtml}
+      <div id="trackBody"></div>
+    `;
+
+    function renderTrack(key){
+      const {track, stages, totalWeeks} = buildRoadmap(key, profile);
+      const body = document.getElementById('trackBody');
+      body.innerHTML = `
+        <div class="rm-summary-row">
+          <div class="rm-stat"><b>${esc(track.label)}</b>Recommended track</div>
+          <div class="rm-stat"><b>${totalWeeks} wks</b>Total roadmap length</div>
+          <div class="rm-stat"><b>${HOURS_LABELS[profile.hours] || '—'}</b>Weekly commitment</div>
+          <div class="rm-stat"><b>${MODE_LABELS[profile.mode] || 'Best fit'}</b>Preferred mode</div>
+        </div>
+        <div class="timeline">
+          ${stages.map(s => `
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="card">
+                <div class="tl-week">${s.weeks} week${s.weeks===1?'':'s'}</div>
+                <h3>${esc(s.title)}</h3>
+                <p class="muted" style="margin:0;">${esc(s.focus)}</p>
+                <div class="tl-skills">${s.skills.map(sk => `<span class="pill">${esc(sk)}</span>`).join('')}</div>
+                <div class="resource-card">
+                  <div class="resource-icon">${RESOURCE_ICONS[s.resource.type]}</div>
+                  <div>
+                    <p class="rc-type">${esc(s.resource.type)}</p>
+                    <p class="rc-name">${esc(s.resource.name)}</p>
+                    <p class="rc-note">${esc(s.resource.note)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    renderTrack(matched[0]);
+
+    if(matched.length > 1){
+      document.querySelectorAll('#trackSwitch .chip').forEach(c => {
+        c.addEventListener('click', () => {
+          document.querySelectorAll('#trackSwitch .chip').forEach(x => x.classList.remove('active'));
+          c.classList.add('active');
+          renderTrack(c.dataset.track);
+        });
+      });
+    }
+    document.getElementById('btnRetakeInline').addEventListener('click', openWizard);
+
+    // Update recommendation banner on the Courses tab
+    const banner = document.getElementById('recommendedBanner');
+    const bannerText = document.getElementById('recommendedBannerText');
+    document.getElementById('genericCta').hidden = true;
+    banner.hidden = false;
+    bannerText.textContent = matched.map(k => TRACKS[k].label).join(' · ');
+  }
+
+  function renderProfile(profile){
+    const initials = (profile.name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase() || '?';
+    document.getElementById('profAvatar').textContent = initials;
+    document.getElementById('profName').textContent = profile.name || 'Your profile';
+    document.getElementById('profRole').textContent = `${LEVEL_LABELS[profile.level] || ''}${profile.field ? ', ' + profile.field : ''}`.replace(/^, /,'');
+    document.getElementById('profField').textContent = profile.field || '—';
+    document.getElementById('profLevel').textContent = LEVEL_LABELS[profile.level] || '—';
+    document.getElementById('profTime').textContent = TIME_LABELS[profile.time] || '—';
+    document.getElementById('profMode').textContent = MODE_LABELS[profile.mode] || '—';
+
+    const intCard = document.getElementById('profInterestsCard');
+    const intWrap = document.getElementById('profInterests');
+    if(profile.interests.length){
+      intCard.hidden = false;
+      intWrap.innerHTML = profile.interests.map(k => `<span class="interest-pill">${esc(TRACKS[k].label)}</span>`).join('');
+    }
+    const skCard = document.getElementById('profSkillsCard');
+    const skWrap = document.getElementById('profSkills');
+    if(profile.skills.length){
+      skCard.hidden = false;
+      skWrap.innerHTML = profile.skills.map(s => `<span class="pill">${esc(s.name)} · ${esc(s.level)}</span>`).join('');
+    }
+  }
+
+  document.getElementById('btnRetake').addEventListener('click', openWizard);
+
+  /* ---------------- Wizard controller ---------------- */
+
+  const wizScrim = document.getElementById('wizScrim');
+  const wizard = document.getElementById('wizard');
+  const wizBody = document.getElementById('wizBody');
+  const wizBack = document.getElementById('wizBack');
+  const wizNext = document.getElementById('wizNext');
+  const wizClose = document.getElementById('wizClose');
+  const wizProgressFill = document.getElementById('wizProgressFill');
+  const wizStepCount = document.getElementById('wizStepCount');
+
+  let wizStep = 1;
+  const TOTAL_STEPS = 5;
+  let draft = null;
+
+  function freshDraft(){
+    return {name:'', level:'', field:'', interests:[], skills:[], time:'', hours:'', mode:''};
+  }
+
+  function openWizard(){
+    draft = freshDraft();
+    wizStep = 1;
+    document.getElementById('inpName').value = '';
+    document.getElementById('inpField').value = '';
+    document.getElementById('skillList').innerHTML = '';
+    document.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+    wizard.classList.remove('loading');
+    updateWizardUI();
+    wizScrim.classList.add('show');
+    wizard.classList.add('show');
+  }
+  function closeWizard(){
+    wizScrim.classList.remove('show');
+    wizard.classList.remove('show');
+  }
+  wizClose.addEventListener('click', closeWizard);
+  wizScrim.addEventListener('click', closeWizard);
+  document.getElementById('btnStartWizard').addEventListener('click', openWizard);
+
+  function updateWizardUI(){
+    document.querySelectorAll('.wiz-step').forEach(el => el.classList.toggle('active', el.dataset.step === String(wizStep)));
+    wizProgressFill.style.width = (wizStep/TOTAL_STEPS*100) + '%';
+    wizStepCount.textContent = `Step ${wizStep} of ${TOTAL_STEPS}`;
+    wizBack.style.visibility = wizStep === 1 ? 'hidden' : 'visible';
+    wizNext.textContent = wizStep === TOTAL_STEPS ? 'Analyse & build my roadmap' : 'Next';
+    if(wizStep === TOTAL_STEPS) renderReview();
+  }
+
+  function singleSelectGroup(groupId, onPick){
+    document.querySelectorAll(`#${groupId} .opt-chip`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`#${groupId} .opt-chip`).forEach(x => x.classList.remove('selected'));
+        btn.classList.add('selected');
+        onPick(btn.dataset.val);
+      });
+    });
+  }
+  singleSelectGroup('grpLevel', v => draft.level = v);
+  singleSelectGroup('grpTime', v => draft.time = v);
+  singleSelectGroup('grpHours', v => draft.hours = v);
+  singleSelectGroup('grpMode', v => draft.mode = v);
+
+  document.querySelectorAll('#grpInterests .opt-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.val;
+      const idx = draft.interests.indexOf(val);
+      if(idx === -1){ draft.interests.push(val); btn.classList.add('selected'); }
+      else { draft.interests.splice(idx,1); btn.classList.remove('selected'); }
+    });
+  });
+
+  function renderSkillList(){
+    const wrap = document.getElementById('skillList');
+    wrap.innerHTML = draft.skills.map((s,i) => `<span class="skill-pill">${esc(s.name)} · ${esc(s.level)}<button type="button" data-i="${i}" aria-label="Remove">&times;</button></span>`).join('');
+    wrap.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      draft.skills.splice(Number(b.dataset.i),1);
+      renderSkillList();
+    }));
+  }
+  document.getElementById('btnAddSkill').addEventListener('click', () => {
+    const nameInp = document.getElementById('inpSkillName');
+    const levelSel = document.getElementById('inpSkillLevel');
+    const name = nameInp.value.trim();
+    if(!name) return;
+    draft.skills.push({name, level: levelSel.value});
+    nameInp.value = '';
+    renderSkillList();
+  });
+
+  function renderReview(){
+    draft.name = document.getElementById('inpName').value.trim();
+    draft.field = document.getElementById('inpField').value.trim();
+    const grid = document.getElementById('reviewGrid');
+    grid.innerHTML = `
+      <div class="review-row"><span class="k">Name</span><span class="v">${esc(draft.name) || '—'}</span></div>
+      <div class="review-row"><span class="k">Education level</span><span class="v">${LEVEL_LABELS[draft.level] || '—'}</span></div>
+      <div class="review-row"><span class="k">Field of study</span><span class="v">${esc(draft.field) || '—'}</span></div>
+      <div class="review-row"><span class="k">Interests</span><span class="v">${draft.interests.map(k=>esc(TRACKS[k].label)).join(', ') || '—'}</span></div>
+      <div class="review-row"><span class="k">Skills</span><span class="v">${draft.skills.map(s=>esc(s.name)).join(', ') || 'None yet'}</span></div>
+      <div class="review-row"><span class="k">Time available</span><span class="v">${TIME_LABELS[draft.time] || '—'}</span></div>
+      <div class="review-row"><span class="k">Weekly hours</span><span class="v">${HOURS_LABELS[draft.hours] || '—'}</span></div>
+      <div class="review-row"><span class="k">Preferred mode</span><span class="v">${MODE_LABELS[draft.mode] || '—'}</span></div>
+    `;
+  }
+
+  function validateStep(step){
+    if(step === 1){
+      draft.field = document.getElementById('inpField').value.trim();
+      if(!draft.level){ alert('Please choose your education level.'); return false; }
+      if(!draft.field){ alert('Please tell us the field or course you studied.'); return false; }
+    }
+    if(step === 2 && draft.interests.length === 0){
+      alert('Pick at least one interest so we can build your roadmap.');
+      return false;
+    }
+    if(step === 4){
+      if(!draft.time){ alert('Choose how much time you can give overall.'); return false; }
+      if(!draft.hours){ alert('Choose roughly how many hours a week you can give.'); return false; }
+      if(!draft.mode){ alert('Choose how you prefer to learn.'); return false; }
+    }
+    return true;
+  }
+
+  const LOADING_MESSAGES = [
+    'Reading your answers…',
+    'Matching your interests to industry demand…',
+    'Weighing your existing skills…',
+    'Fitting the plan to your time budget…',
+    'Choosing between online, offline and college paths…',
+    'Building your roadmap…'
+  ];
+
+  function runAnalysis(){
+    draft.name = document.getElementById('inpName').value.trim();
+    wizard.classList.add('loading');
+    document.querySelectorAll('.wiz-step').forEach(el => el.classList.remove('active'));
+    document.querySelector('.wiz-step[data-step="loading"]').classList.add('active');
+    const msgEl = document.getElementById('loadingMsg');
+    let i = 0;
+    msgEl.textContent = LOADING_MESSAGES[0];
+    const interval = setInterval(() => {
+      i = (i + 1) % LOADING_MESSAGES.length;
+      msgEl.textContent = LOADING_MESSAGES[i];
+    }, 480);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      const profile = draft;
+      const matched = matchTracks(profile);
+      window.skillSyncProfile = profile;
+      renderProfile(profile);
+      renderRoadmap(profile, matched);
+      wizard.classList.remove('loading');
+      closeWizard();
+      switchTab('1');
+      activateSub1('roadmap');
+    }, 2600);
+  }
+
+  wizNext.addEventListener('click', () => {
+    if(wizStep < TOTAL_STEPS){
+      if(!validateStep(wizStep)) return;
+      wizStep++;
+      updateWizardUI();
+    } else {
+      if(!validateStep(TOTAL_STEPS)) return;
+      runAnalysis();
+    }
+  });
+  wizBack.addEventListener('click', () => {
+    if(wizStep > 1){ wizStep--; updateWizardUI(); }
+  });
+</script>
+
+<script>
+/* ===== SkillSync backend bridge =====
+   The original prototype's UI is preserved. This bridge adds persistence,
+   server-side roadmap generation, Q&A, careers and internship APIs. */
+const SKILLSYNC_API = localStorage.getItem('skillsync_api') || 'http://localhost:4000/api';
+const SKILLSYNC_USER = localStorage.getItem('skillsync_user_id') || ('user-' + Math.random().toString(36).slice(2,10));
+localStorage.setItem('skillsync_user_id', SKILLSYNC_USER);
+async function apiFetch(path, options={}){
+  const res=await fetch(SKILLSYNC_API+path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+  if(!res.ok){let e={}; try{e=await res.json()}catch{}; throw new Error(e.error||`API ${res.status}`)}
+  return res.json();
+}
+function mapServerRoadmapToPrototype(profile, server){
+  if(!server.roadmaps) return;
+  const matched=server.matchedTracks||server.roadmaps.map(r=>r.trackKey);
+  // Keep the existing renderer's visual language while using backend-generated data.
+  window.skillSyncServerRoadmap=server;
+  renderRoadmap(profile, matched.length?matched:['web']);
+  const first=server.roadmaps[0];
+  if(first){
+    const body=document.getElementById('trackBody');
+    const stageHtml=first.stages.map(s=>`<div class="tl-item"><div class="tl-dot"></div><div class="card"><div class="tl-week">${s.weekCount} week${s.weekCount===1?'':'s'}</div><h3>${esc(s.title)}</h3><p class="muted" style="margin:0;">${esc(s.focus)}</p><div class="tl-skills">${s.skills.map(x=>`<span class="pill">${esc(x)}</span>`).join('')}</div><div class="resource-card"><div class="resource-icon">${RESOURCE_ICONS['Online']}</div><div><p class="rc-type">Industry-aligned plan</p><p class="rc-name">${esc(s.deliverable||'Practical deliverable')}</p><p class="rc-note">${esc(s.industryReason||'Build this skill and validate it with a practical project.')}</p></div></div></div></div>`).join('');
+    body.innerHTML=`<div class="rm-summary-row"><div class="rm-stat"><b>${esc(first.label)}</b>Recommended track</div><div class="rm-stat"><b>${first.totalWeeks} wks</b>Total roadmap length</div><div class="rm-stat"><b>${esc(first.weeklyHours||'—')}</b>Weekly commitment</div><div class="rm-stat"><b>${server.ai?'AI generated':'Rule-based fallback'}</b>Engine</div></div><div class="timeline">${stageHtml}</div>`;
+  }
+}
+async function runServerRoadmap(profile){
+  try{
+    const server=await apiFetch('/roadmap',{method:'POST',body:JSON.stringify(profile)});
+    mapServerRoadmapToPrototype(profile,server);
+    if(server.summary) console.info('SkillSync AI summary:',server.summary);
+    return server;
+  }catch(e){console.warn('Backend roadmap unavailable, using local engine:',e.message); return null;}
+}
+async function persistProfile(profile){ try{ await apiFetch('/profiles/'+encodeURIComponent(SKILLSYNC_USER),{method:'PUT',body:JSON.stringify(profile)}); }catch(e){console.warn('Profile save failed:',e.message);} }
+async function hydrateProfile(){
+  try{ const p=await apiFetch('/profiles/'+encodeURIComponent(SKILLSYNC_USER)); window.skillSyncProfile=p; renderProfile(p); if(p.interests?.length) renderRoadmap(p,matchTracks(p)); }catch(e){}
+}
+async function loadDynamicCareers(){
+  try{const data=await apiFetch('/careers'); const section=document.querySelector('#panel-2 .card-grid'); if(!section)return; section.innerHTML=data.map(c=>`<div class="card"><div class="story-head"><div class="avatar-ring">${esc(c.name.split(' ').map(x=>x[0]).join('').slice(0,2))}</div><div><div class="who">${esc(c.name)}</div><div class="role">${esc(c.role)} · ${esc(c.company)} · ${c.years} yrs</div></div></div><p class="story-text">"${esc(c.story)}"</p><div class="row-between"><span class="tag teal">${esc(c.range)}</span><button class="btn ghost" type="button" onclick="alert(${JSON.stringify(c.steps.join(' → '))})">View path</button></div></div>`).join('');}catch(e){}
+}
+async function loadDynamicInternships(){
+  try{const data=await apiFetch('/internships'); const section=document.querySelector('#panel-3 .card-grid'); if(!section)return; section.innerHTML=data.map(i=>`<div class="card"><div class="row-between"><h3>${esc(i.company)}</h3><span class="tag gold">${esc(i.status)}</span></div><p class="muted" style="margin:6px 0 10px;">Avg. ${i.internsPerYear} interns / year · ${i.placed} students placed to date</p><p class="muted" style="margin:0 0 6px;font-weight:600;color:var(--ink);">Colleges they visit most:</p><div class="pill-wrap">${i.colleges.map(x=>`<span class="pill">${esc(x)}</span>`).join('')}</div><p class="muted" style="margin:10px 0 0;"><b>Skill match:</b> ${i.skills.map(esc).join(', ')}</p></div>`).join('');}catch(e){}
+}
+async function loadDynamicQuestions(){
+  try{const data=await apiFetch('/questions'); const section=document.querySelector('#panel-4 [data-panel4="expert"] .card-grid'); if(!section)return; section.innerHTML=data.map(q=>`<div class="card"><div class="row-between"><h3>${esc(q.title)}</h3><span class="tag ${q.status==='answered'?'teal':'gold'}">${esc(q.status)}</span></div><p class="muted" style="margin-top:6px;">${q.answer?`Answered by <b>${esc(q.expert)}</b>: ${esc(q.answer)}`:'Waiting for an expert response'}</p></div>`).join('');}catch(e){}
+}
+function addFunctionalQA(){
+  const btn=document.querySelector('#panel-4 [data-panel4="expert"] > button'); if(!btn)return;
+  btn.onclick=async()=>{
+    const title=prompt('What do you want to ask?'); if(!title?.trim())return;
+    const body=prompt('Add context (optional):')||'';
+    try{await apiFetch('/questions',{method:'POST',body:JSON.stringify({title,body,userId:SKILLSYNC_USER})}); await loadDynamicQuestions(); alert('Question posted. Experts can now answer it.');}catch(e){alert(e.message);}
+  };
+}
+function addChatbotToQA(){
+  const parent=document.querySelector('#panel-4 [data-panel4="expert"]'); if(!parent||document.getElementById('aiQaBox'))return;
+  const card=document.createElement('div'); card.className='card'; card.id='aiQaBox'; card.innerHTML='<h3>Ask SkillSync AI</h3><p class="muted">Get a quick career/skill-gap answer based on your profile.</p><div class="field"><input id="aiQuestion" placeholder="e.g. What should I learn next for a DevOps internship?"></div><button class="btn block" id="aiAskBtn">Ask AI</button><p class="muted" id="aiAnswer" style="margin-top:10px;"></p>'; parent.insertBefore(card,parent.children[1]);
+  document.getElementById('aiAskBtn').onclick=async()=>{const q=document.getElementById('aiQuestion').value.trim();if(!q)return;const out=document.getElementById('aiAnswer');out.textContent='Thinking…';try{const r=await apiFetch('/chat',{method:'POST',body:JSON.stringify({question:q,profile:window.skillSyncProfile||{}})});out.textContent=r.answer;}catch(e){out.textContent=e.message;}};
+}
+// Override the prototype analysis function by wrapping the existing one through the wizard completion hook.
+const _originalRunAnalysis = runAnalysis;
+runAnalysis = function(){
+  draft.name=document.getElementById('inpName').value.trim();
+  wizard.classList.add('loading');
+  document.querySelectorAll('.wiz-step').forEach(el=>el.classList.remove('active'));
+  document.querySelector('.wiz-step[data-step="loading"]').classList.add('active');
+  const msgEl=document.getElementById('loadingMsg'); let i=0; msgEl.textContent=LOADING_MESSAGES[0];
+  const interval=setInterval(()=>{i=(i+1)%LOADING_MESSAGES.length;msgEl.textContent=LOADING_MESSAGES[i];},480);
+  setTimeout(async()=>{
+    clearInterval(interval); const profile={...draft}; window.skillSyncProfile=profile; renderProfile(profile); await persistProfile(profile); const server=await runServerRoadmap(profile);
+    if(!server) renderRoadmap(profile,matchTracks(profile));
+    wizard.classList.remove('loading'); closeWizard(); switchTab('1'); activateSub1('roadmap');
+  },900);
+};
+window.addEventListener('load',async()=>{
+  await hydrateProfile(); await loadDynamicCareers(); await loadDynamicInternships(); await loadDynamicQuestions(); addFunctionalQA(); addChatbotToQA();
+  const save=document.getElementById('saveProfileEdit');
+  save?.addEventListener('click',async()=>{
+    const p={...(window.skillSyncProfile||{}),name:document.getElementById('editName').value.trim(),field:document.getElementById('editField').value.trim(),level:document.getElementById('editLevel').value};
+    if(!p.name||!p.field){alert('Please enter your name and field.');return;}
+    window.skillSyncProfile=p; renderProfile(p); await persistProfile(p); const server=await runServerRoadmap(p); if(!server) renderRoadmap(p,matchTracks(p)); alert('Profile updated and roadmap refreshed.');
+  });
+  const syncEdit=()=>{const p=window.skillSyncProfile;if(!p)return;document.getElementById('editName').value=p.name||'';document.getElementById('editField').value=p.field||'';document.getElementById('editLevel').value=p.level||'ug';};
+  syncEdit();
+});
+</script>
+
+
+<div class="modal-functional" id="functionalModal"><div class="modal-box"><button class="modal-close" id="functionalClose">×</button><div id="functionalBody"></div></div></div><div class="toast" id="toast"></div>
+\n<script id="skillsync-functional-layer">\n(function(){\n const API=window.SKILLSYNC_API||localStorage.getItem('skillsync_api')||'http://localhost:4000/api';\n const USER=window.SKILLSYNC_USER||localStorage.getItem('skillsync_user_id');\n const modal=document.getElementById('functionalModal'), body=document.getElementById('functionalBody'), close=document.getElementById('functionalClose'), toast=document.getElementById('toast');\n const show=(html)=>{body.innerHTML=html;modal.classList.add('show')}; const hide=()=>modal.classList.remove('show'); close.onclick=hide; modal.onclick=e=>{if(e.target===modal)hide()};\n const notify=m=>{toast.textContent=m;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2200)};\n async function api(path,opt={}){const r=await fetch(API+path,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Request failed');return d}\n function esc2(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML}\n window.mapServerRoadmapToPrototype=function(profile,server){\n   if(!server?.roadmaps?.length)return; window.skillSyncServerRoadmap=server; const matched=server.matchedTracks||server.roadmaps.map(r=>r.trackKey);\n   renderRoadmap(profile,matched.length?matched:['web']); const first=server.roadmaps[0]; const bodyEl=document.getElementById('trackBody'); if(!bodyEl)return;\n   const stages=(first.stages||[]).map(s=>`<div class="tl-item"><div class="tl-dot"></div><div class="card"><div class="tl-week">${s.weekCount} week${s.weekCount===1?'':'s'}</div><h3>${esc2(s.title)}</h3><p class="muted" style="margin:0">${esc2(s.focus)}</p><div class="tl-skills">${(s.skills||[]).map(x=>`<span class="pill">${esc2(x)}</span>`).join('')}</div><div class="resource-card"><div class="resource-icon">${RESOURCE_ICONS.Online}</div><div><p class="rc-type">Industry alignment</p><p class="rc-name">${esc2(s.deliverable)}</p><p class="rc-note">${esc2(s.industryReason)}</p></div></div></div></div>`).join('');\n   const daily=(first.daily||[]); const dailyHtml=daily.length?`<div class="card"><div class="row-between"><h3>AI day-wise starter plan</h3><span class="tag gold">${daily.length} days</span></div><p class="muted">Your first two weeks are broken into small daily actions. The plan can be regenerated after you update your profile.</p><div class="daily-grid">${daily.map(d=>`<div class="daily-item"><b>Day ${d.day} · Week ${d.week} · ${esc2(d.focus)}</b><div class="muted" style="margin-top:5px">${(d.tasks||[]).map(esc2).join(' • ')}</div></div>`).join('')}</div></div>`:'';\n   bodyEl.innerHTML=`<div class="rm-summary-row"><div class="rm-stat"><b>${esc2(first.label)}</b>Recommended track</div><div class="rm-stat"><b>${first.totalWeeks} wks</b>Total roadmap</div><div class="rm-stat"><b>${esc2(first.weeklyHours)}</b>Weekly commitment</div><div class="rm-stat"><b>${server.ai?'AI':'Fallback'}</b>Engine</div></div><div class="card banner-card"><h3>Skill gap to close</h3><p class="muted">${first.gapSkills?.length?esc2(first.gapSkills.join(' · ')):'Your baseline skills already cover the main requirements. Build projects and validate them.'}</p></div><div class="timeline">${stages}</div>${dailyHtml}<div class="card"><h3>Target roles</h3><p class="muted">Use the Internship page to compare your profile against roles and start an application pipeline.</p><button class="btn" id="goInternships">See matching internships →</button></div>`;\n   document.getElementById('goInternships')?.addEventListener('click',()=>{hide();switchTab('3');loadMatchedInternships()});\n }\n async function loadMatchedInternships(){try{const rows=await api('/internships/match/'+encodeURIComponent(USER));const sec=document.querySelector('#panel-3 .card-grid');if(!sec)return;sec.innerHTML=rows.map(i=>`<div class="card"><div class="row-between"><h3>${esc2(i.company)}</h3><span class="tag ${i.matchScore>=60?'teal':'gold'}">${i.matchScore}% match</span></div><p class="muted" style="margin:6px 0 10px">${esc2(i.location)} · ${esc2(i.status)}</p><div class="pill-wrap">${i.skills.map(s=>`<span class="pill">${esc2(s)}</span>`).join('')}</div><p class="muted" style="margin:10px 0">Roles: ${i.roles.map(esc2).join(', ')}</p><button class="btn ghost apply-btn" data-id="${i.id}" data-company="${esc2(i.company)}">Add to applications</button></div>`).join('');bindApplicationButtons();}catch(e){notify('Create your profile first to calculate internship match.')}}\n function bindApplicationButtons(){document.querySelectorAll('.apply-btn').forEach(b=>b.onclick=async()=>{try{await api('/applications/'+encodeURIComponent(USER),{method:'POST',body:JSON.stringify({internshipId:b.dataset.id,company:b.dataset.company})});b.textContent='Added ✓';b.disabled=true;notify('Added to My applications')}catch(e){notify(e.message)}})}\n async function openCareer(id){try{const c=await api('/careers/'+id);show(`<h2>${esc2(c.name)} — ${esc2(c.role)}</h2><p class="muted">${esc2(c.company)} · ${c.years} years · ${esc2(c.education)}</p><div class="card"><h3>Full story</h3><p class="story-text">${esc2(c.story)}</p></div><div class="card"><h3>Journey</h3><div class="timeline">${c.steps.map((s,i)=>`<div class="tl-item"><div class="tl-dot"></div><div class="card"><div class="tl-week">STEP ${i+1}</div><h3>${esc2(s)}</h3><p class="muted">A milestone in the path.</p></div></div>`).join('')}</div></div>`)}catch(e){notify(e.message)}}\n function bindCareerButtons(){document.querySelectorAll('#panel-2 .btn').forEach((b,i)=>{if(b.textContent.includes('Read full story')||b.textContent.includes('View path'))b.onclick=()=>openCareer((window._careerIds||[])[i]||'c1')})}\n async function refreshCareers(){try{const data=await api('/careers');window._careerIds=data.map(x=>x.id);const sec=document.querySelector('#panel-2 .card-grid');sec.innerHTML=data.map(c=>`<div class="card"><div class="story-head"><div class="avatar-ring">${esc2(c.name.split(' ').map(x=>x[0]).join('').slice(0,2))}</div><div><div class="who">${esc2(c.name)}</div><div class="role">${esc2(c.role)} · ${esc2(c.company)} · ${c.years} yrs</div></div></div><p class="story-text">“${esc2(c.story)}”</p><div class="row-between"><span class="tag teal">${esc2(c.range)}</span><button class="btn ghost" data-career="${c.id}">Read full story</button></div></div>`).join('');sec.querySelectorAll('[data-career]').forEach(b=>b.onclick=()=>openCareer(b.dataset.career))}catch(e){}}\n async function refreshInternships(){try{const data=await api('/internships');window._internshipData=data;renderInternships(data)}catch(e){}}\n function renderInternships(data){const sec=document.querySelector('#panel-3 .card-grid');if(!sec)return;sec.innerHTML=data.map(i=>`<div class="card"><div class="row-between"><h3>${esc2(i.company)}</h3><span class="tag gold">${esc2(i.status)}</span></div><p class="muted" style="margin:6px 0 10px">${i.internsPerYear} interns/year · ${i.placed} placed · ${esc2(i.location)}</p><div class="pill-wrap">${i.skills.map(s=>`<span class="pill">${esc2(s)}</span>`).join('')}</div><p class="muted" style="margin:10px 0"><b>Roles:</b> ${i.roles.map(esc2).join(', ')}</p><button class="btn ghost apply-btn" data-id="${i.id}" data-company="${esc2(i.company)}">Add to applications</button></div>`).join('');bindApplicationButtons()}\n function bindInternshipFilters(){document.querySelectorAll('#panel-3 .chip').forEach(ch=>ch.onclick=()=>{document.querySelectorAll('#panel-3 .chip').forEach(x=>x.classList.remove('active'));ch.classList.add('active');const v=ch.textContent.trim();renderInternships(v==='All sectors'?window._internshipData:window._internshipData.filter(x=>x.sector===v))})}\n async function askQuestion(){const title=prompt('Question title');if(!title?.trim())return;const context=prompt('Add context (optional)')||'';try{await api('/questions',{method:'POST',body:JSON.stringify({title,body:context,userId:USER})});notify('Question posted');loadQuestions()}catch(e){notify(e.message)}}\n async function loadQuestions(){try{const data=await api('/questions');const sec=document.querySelector('#panel-4 [data-panel4="expert"] .card-grid');sec.innerHTML=data.map(q=>`<div class="card"><div class="row-between"><h3>${esc2(q.title)}</h3><span class="tag ${q.status==='answered'?'teal':'gold'}">${esc2(q.status)}</span></div><p class="muted">${q.answer?`<b>${esc2(q.expert)}</b>: ${esc2(q.answer)}`:'Waiting for an expert response'}</p>${q.status==='pending'?`<button class="btn ghost answer-demo" data-id="${q.id}">Answer as demo expert</button>`:''}</div>`).join('');sec.querySelectorAll('.answer-demo').forEach(b=>b.onclick=async()=>{const a=prompt('Expert answer');if(!a?.trim())return;await api('/questions/'+b.dataset.id+'/answer',{method:'POST',body:JSON.stringify({answer:a,expert:'SkillSync Expert'})});loadQuestions()})}catch(e){}}\n function profileEditor(){const p=window.skillSyncProfile||{};show(`<h2>Edit profile</h2><p class="muted">Every field below is saved to the SkillSync backend.</p><div class="edit-grid"><div class="field"><label>Name</label><input id="edName" value="${esc2(p.name||'')}"></div><div class="field"><label>Field / course</label><input id="edField" value="${esc2(p.field||'')}"></div><div class="field"><label>Education level</label><select id="edLevel">${Object.entries(LEVEL_LABELS).map(([k,v])=>`<option value="${k}" ${p.level===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Time</label><select id="edTime">${Object.entries(TIME_LABELS).map(([k,v])=>`<option value="${k}" ${p.time===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Weekly hours</label><select id="edHours">${Object.entries(HOURS_LABELS).map(([k,v])=>`<option value="${k}" ${p.hours===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>Learning mode</label><select id="edMode">${Object.entries(MODE_LABELS).map(([k,v])=>`<option value="${k}" ${p.mode===k?'selected':''}>${v}</option>`).join('')}</select></div></div><button class="btn block" id="saveEd">Save changes & refresh roadmap</button>`);document.getElementById('saveEd').onclick=async()=>{const np={...p,name:edName.value.trim(),field:edField.value.trim(),level:edLevel.value,time:edTime.value,hours:edHours.value,mode:edMode.value};try{const saved=await api('/profiles/'+encodeURIComponent(USER),{method:'PUT',body:JSON.stringify(np)});window.skillSyncProfile=saved;renderProfile(saved);const rm=await api('/roadmap',{method:'POST',body:JSON.stringify(saved)});mapServerRoadmapToPrototype(saved,rm);hide();notify('Profile saved and roadmap refreshed')}catch(e){notify(e.message)}}}\n async function showSaved(){try{const rows=await api('/saved-courses/'+USER);show(`<h2>Saved courses</h2>${rows.length?rows.map(c=>`<div class="card"><h3>${esc2(c.title||c.name)}</h3><p class="muted">${esc2(c.reason||'Saved from SkillSync')}</p></div>`).join(''):'<p class="muted">No saved courses yet. Use course recommendations to save one.</p>'}catch(e){notify(e.message)}}\n async function showApplications(){try{const rows=await api('/applications/'+USER);show(`<h2>My applications</h2>${rows.length?rows.map(a=>`<div class="card"><div class="row-between"><h3>${esc2(a.company)}</h3><span class="tag indigo">${esc2(a.status)}</span></div><p class="muted">Added ${new Date(a.createdAt).toLocaleDateString()}</p></div>`).join(''):'<p class="muted">No applications yet. Go to Internships and add a role.</p>'}catch(e){notify(e.message)}}\n function bindAll(){\n   document.querySelectorAll('#panel-2 .btn').forEach(b=>{if(b.textContent.includes('Read full story'))b.onclick=()=>openCareer(b.dataset.career||'c1')});\n   document.querySelector('#panel-4 [data-panel4="expert"] > button')?.addEventListener('click',askQuestion);\n   bindInternshipFilters();\n   document.querySelectorAll('#panel-5 .list-item').forEach((row,i)=>row.onclick=()=>{if(i===0)showSaved();else if(i===1)showApplications();else if(i===2)profileEditor();else if(i===3)profileEditor();else if(i===4){localStorage.removeItem('skillsync_user_id');notify('Logged out. Refresh to start a new profile.')}});\n   document.querySelector('#panel-1 #genericCta button')?.addEventListener('click',openWizard);\n }\n const oldLoad=window.onload; window.addEventListener('load',async()=>{await refreshCareers();await refreshInternships();await loadQuestions();addChatbotToQA();bindAll();await loadMatchedInternships();});\n // Search boxes become real filters instead of decorative controls.\n document.querySelectorAll('.search-box input').forEach(inp=>inp.addEventListener('input',async()=>{const q=inp.value.trim().toLowerCase();const panel=inp.closest('.sub-panel');panel.querySelectorAll('.card').forEach(c=>c.style.display=!q||c.textContent.toLowerCase().includes(q)?'':'none')}));\n})();\n</script>\n</body>
+</html>
