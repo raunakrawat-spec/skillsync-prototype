@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SkillSync — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --indigo:#1F2D50;
+    --indigo-soft:#34456F;
+    --indigo-pale:#E7EAF2;
+    --gold:#C68A2E;
+    --gold-pale:#F4E6C9;
+    --teal:#2F6F62;
+    --teal-pale:#E1EEE9;
+    --bg:#F3EFE6;
+    --card:#FFFFFF;
+    --ink:#201C16;
+    --ink-soft:#5B564C;
+    --line:#DED6C4;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  h1,h2,h3,.serif{font-family:'Newsreader', serif;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ---------- App shell (full-bleed: this is the real site, not a mockup) ---------- */
+  .phone{
+    width:100%;
+    min-height:100vh;
+    min-height:100dvh;
+    background:var(--card);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+  .main-col{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 16px 12px;
+    border-bottom:1px solid var(--line);
+    background:var(--card);
+    position:relative;
+    z-index:20;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:none;border:none;padding:6px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--indigo);position:relative;
+  }
+  .icon-btn:hover{background:var(--indigo-pale);}
+  .icon-btn svg{width:22px;height:22px;}
+  .wordmark{
+    font-family:'Newsreader', serif;
+    font-weight:600;
+    font-size:19px;
+    color:var(--indigo);
+    letter-spacing:0.2px;
+  }
+  .topbar-right{display:flex;align-items:center;gap:4px;}
+  .avatar-btn{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--indigo);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .avatar-btn svg{width:18px;height:18px;}
+  .dot{
+    position:absolute;top:6px;right:6px;
+    width:7px;height:7px;border-radius:50%;
+    background:var(--gold);border:1.5px solid var(--card);
+  }
+
+  /* ---------- Drawer ---------- */
+  .scrim{
+    position:absolute;inset:0;background:rgba(32,28,22,0.42);
+    opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:30;
+  }
+  .scrim.show{opacity:1;pointer-events:auto;}
+  .drawer{
+    position:absolute;top:0;bottom:0;left:0;
+    width:270px;background:var(--indigo);color:#EFE9DC;
+    transform:translateX(-100%);transition:transform .28s ease;
+    z-index:31;display:flex;flex-direction:column;padding:22px 0 20px;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:0 22px 18px;border-bottom:1px solid rgba(239,233,230,0.16);margin-bottom:8px;}
+  .drawer-head .name{font-family:'Newsreader',serif;font-size:20px;font-weight:600;color:#fff;}
+  .drawer-head .tag{font-size:12.5px;color:#B9C0D6;margin-top:3px;}
+  .drawer nav{display:flex;flex-direction:column;padding:6px 10px;gap:2px;overflow-y:auto;}
+  .drawer nav a{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 12px;border-radius:10px;color:#EFE9DC;
+    text-decoration:none;font-size:14.5px;font-weight:500;
+  }
+  .drawer nav a svg{width:18px;height:18px;flex-shrink:0;opacity:.85;}
+  .drawer nav a:hover{background:rgba(255,255,255,0.08);}
+  .drawer nav .sep{height:1px;background:rgba(239,233,230,0.14);margin:10px 12px;}
+  .drawer-foot{padding:14px 22px 0;font-size:11.5px;color:#8F97B3;border-top:1px solid rgba(239,233,230,0.14);margin-top:auto;}
+
+  /* ---------- Notification popover ---------- */
+  .notif-pop{
+    position:absolute;top:60px;right:14px;width:280px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:14px;box-shadow:0 18px 40px -18px rgba(32,28,22,0.4);
+    z-index:32;opacity:0;transform:translateY(-6px);pointer-events:none;
+    transition:all .18s ease;
+  }
+  .notif-pop.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+  .notif-pop .np-head{padding:13px 16px 10px;font-weight:600;font-size:14px;border-bottom:1px solid var(--line);}
+  .notif-item{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;}
+  .notif-item:last-child{border-bottom:none;}
+  .notif-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);margin-top:6px;flex-shrink:0;}
+  .notif-item p{margin:0;font-size:13px;line-height:1.4;}
+  .notif-item .t{color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+
+  /* ---------- Content ---------- */
+  .content{flex:1;overflow-y:auto;padding:18px 16px 90px;}
+  .content::-webkit-scrollbar{width:0;}
+  .panel-title{font-size:22px;font-weight:600;margin:2px 0 4px;}
+  .panel-sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;line-height:1.5;}
+
+  /* chips */
+  .chip-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;}
+  .chip-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;padding:8px 14px;border-radius:999px;
+    border:1px solid var(--line);background:var(--card);
+    font-size:13px;font-weight:500;color:var(--ink-soft);white-space:nowrap;
+  }
+  .chip.active{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+
+  /* cards */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px;margin-bottom:12px;
+  }
+  .card h3{margin:0 0 4px;font-size:15.5px;font-weight:600;}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .muted{color:var(--ink-soft);font-size:12.5px;}
+  .tag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px;
+  }
+  .tag.gold{background:var(--gold-pale);color:#8A5F1D;}
+  .tag.teal{background:var(--teal-pale);color:var(--teal);}
+  .tag.indigo{background:var(--indigo-pale);color:var(--indigo);}
+
+  .bar-track{height:6px;background:var(--indigo-pale);border-radius:99px;overflow:hidden;margin-top:8px;}
+  .bar-fill{height:100%;background:var(--gold);border-radius:99px;}
+
+  .search-box{
+    display:flex;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:11px;padding:10px 12px;
+    background:var(--card);margin-bottom:14px;
+  }
+  .search-box svg{width:17px;height:17px;color:var(--ink-soft);flex-shrink:0;}
+  .search-box input{border:none;outline:none;font-size:13.5px;width:100%;font-family:inherit;background:transparent;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--indigo);color:#fff;border:none;border-radius:10px;
+    padding:10px 16px;font-size:13.5px;font-weight:600;
+  }
+  .btn.ghost{background:transparent;color:var(--indigo);border:1px solid var(--indigo);}
+  .btn.block{width:100%;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;
+    padding:9px 11px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+
+  /* skill pills */
+  .pill-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+  .pill{font-size:12px;padding:5px 10px;border-radius:8px;background:var(--indigo-pale);color:var(--indigo);font-weight:500;}
+
+  /* story feed */
+  .story-head{display:flex;gap:10px;align-items:center;margin-bottom:9px;}
+  .avatar-ring{
+    width:42px;height:42px;border-radius:50%;background:var(--teal-pale);
+    color:var(--teal);display:flex;align-items:center;justify-content:center;
+    font-family:'Newsreader',serif;font-weight:600;font-size:16px;flex-shrink:0;
+  }
+  .story-head .who{font-size:14px;font-weight:600;}
+  .story-head .role{font-size:12px;color:var(--ink-soft);}
+  .story-text{font-family:'Newsreader',serif;font-size:14.5px;line-height:1.55;color:#3B362C;margin:0 0 8px;}
+
+  /* accordion */
+  .accordion{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+  .acc-q{
+    width:100%;text-align:left;background:#fff;border:none;padding:13px 14px;
+    display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600;
+  }
+  .acc-q svg{width:16px;height:16px;color:var(--ink-soft);transition:transform .2s ease;flex-shrink:0;}
+  .acc-a{max-height:0;overflow:hidden;transition:max-height .22s ease;background:#FBF9F4;}
+  .acc-a p{margin:0;padding:0 14px 14px;font-size:13px;color:var(--ink-soft);line-height:1.55;}
+  .accordion.open .acc-a{max-height:200px;}
+  .accordion.open .acc-q svg{transform:rotate(180deg);}
+
+  /* profile */
+  .profile-hero{text-align:center;padding:6px 0 18px;}
+  .profile-avatar{
+    width:78px;height:78px;border-radius:50%;background:var(--indigo);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-family:'Newsreader',serif;font-size:28px;font-weight:600;margin:0 auto 10px;
+  }
+  .profile-hero h2{margin:0;font-size:19px;}
+  .profile-hero .role{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .info-cell{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 12px;}
+  .info-cell .l{font-size:11px;color:var(--ink-soft);margin-bottom:2px;}
+  .info-cell .v{font-size:13.5px;font-weight:600;}
+  .list-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:13px 4px;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:500;
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item .l-left{display:flex;align-items:center;gap:11px;}
+  .list-item svg{width:17px;height:17px;color:var(--indigo);}
+  .list-item .chev{width:15px;height:15px;color:var(--ink-soft);}
+  .logout{color:#B23A3A;}
+  .logout svg{color:#B23A3A;}
+
+  /* subtab panels */
+  .sub-panel{display:none;}
+  .sub-panel.active{display:block;}
+
+  /* ---------- Accessibility polish ---------- */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--gold); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ---------- Roadmap CTA / recommendation banner ---------- */
+  .rm-cta{
+    text-align:center;padding:30px 20px;
+  }
+  .rm-cta .rm-icon{
+    width:52px;height:52px;border-radius:14px;background:var(--indigo-pale);color:var(--indigo);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  }
+  .rm-cta .rm-icon svg{width:26px;height:26px;}
+  .rm-cta h3{font-family:'Newsreader',serif;font-size:19px;margin:0 0 8px;}
+  .rm-cta p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 18px;max-width:380px;margin-left:auto;margin-right:auto;}
+  .banner-card{background:var(--indigo-pale);border-color:var(--indigo-pale);}
+  .ai-badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+    color:var(--indigo);background:var(--indigo-pale);padding:4px 10px;border-radius:999px;margin-bottom:8px;
+  }
+  .ai-badge svg{width:12px;height:12px;}
+
+  /* ---------- Roadmap results ---------- */
+  .rm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .rm-head h2{margin:0 0 4px;font-size:20px;}
+  .rm-summary-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .rm-stat{
+    background:var(--card);border:1px solid var(--line);border-radius:11px;
+    padding:9px 13px;font-size:12px;color:var(--ink-soft);
+  }
+  .rm-stat b{display:block;font-size:14px;color:var(--ink);font-weight:600;font-family:'Newsreader',serif;}
+
+  .timeline{position:relative;padding-left:28px;margin-top:8px;}
+  .timeline::before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--line);}
+  .tl-item{position:relative;margin-bottom:16px;}
+  .tl-item:last-child{margin-bottom:0;}
+  .tl-dot{
+    position:absolute;left:-28px;top:3px;width:19px;height:19px;border-radius:50%;
+    background:var(--indigo);border:3px solid var(--indigo-pale);z-index:1;
+  }
+  .tl-week{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.2px;margin-bottom:2px;}
+  .tl-skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .resource-card{
+    display:flex;gap:10px;align-items:flex-start;background:#FBF9F4;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:12px;
+  }
+  .resource-icon{
+    width:30px;height:30px;border-radius:8px;background:var(--card);border:1px solid var(--line);
+    color:var(--indigo);display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .resource-icon svg{width:15px;height:15px;}
+  .resource-card .rc-name{font-size:13px;font-weight:600;margin:0 0 2px;}
+  .resource-card .rc-note{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;}
+  .resource-card .rc-type{font-size:10.5px;font-weight:700;color:var(--teal);margin:0 0 3px;}
+
+  .track-switch{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+
+  /* ---------- Interest / profile pills ---------- */
+  .interest-pill{
+    font-size:12px;padding:6px 11px;border-radius:8px;background:var(--teal-pale);
+    color:var(--teal);font-weight:600;
+  }
+
+  /* ---------- Wizard modal ---------- */
+  .wiz-scrim{
+    position:fixed;inset:0;background:rgba(32,28,22,0.5);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:50;
+  }
+  .wiz-scrim.show{opacity:1;pointer-events:auto;}
+  .wizard{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);
+    width:92%;max-width:460px;max-height:86vh;background:var(--card);
+    border-radius:18px;box-shadow:0 30px 70px -20px rgba(32,28,22,.45);
+    z-index:51;display:flex;flex-direction:column;opacity:0;pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .wizard.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);}
+  .wiz-head{padding:18px 18px 0;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .wiz-progress{flex:1;height:5px;background:var(--indigo-pale);border-radius:99px;overflow:hidden;}
+  .wiz-progress-fill{height:100%;width:20%;background:var(--gold);border-radius:99px;transition:width .3s ease;}
+  .wiz-close{background:none;border:none;font-size:22px;line-height:1;color:var(--ink-soft);padding:2px 6px;border-radius:8px;}
+  .wiz-close:hover{background:var(--indigo-pale);color:var(--indigo);}
+  .wiz-body{padding:18px 22px 6px;overflow-y:auto;flex:1;min-height:220px;}
+  .wiz-step{display:none;}
+  .wiz-step.active{display:block;}
+  .wiz-title{font-family:'Newsreader',serif;font-size:19px;font-weight:600;margin:2px 0 6px;}
+  .wiz-sub{font-size:13px;color:var(--ink-soft);margin:0 0 16px;line-height:1.55;}
+  .opt-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .opt-chip{
+    padding:9px 14px;border-radius:11px;border:1px solid var(--line);background:#fff;
+    font-size:13.5px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .opt-chip.selected{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+  .skill-row{display:flex;gap:8px;margin-bottom:4px;}
+  .skill-row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:inherit;}
+  .skill-row select{border:1px solid var(--line);border-radius:10px;padding:9px 8px;font-size:13px;font-family:inherit;background:#fff;}
+  .skill-list{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 0;}
+  .skill-pill{
+    display:flex;align-items:center;gap:7px;background:var(--teal-pale);color:var(--teal);
+    font-size:12px;font-weight:600;padding:6px 6px 6px 11px;border-radius:8px;
+  }
+  .skill-pill button{background:none;border:none;color:var(--teal);font-size:15px;line-height:1;padding:0 2px;}
+  .review-grid{display:flex;flex-direction:column;gap:8px;}
+  .review-row{
+    display:flex;justify-content:space-between;gap:10px;padding:10px 12px;
+    background:#FBF9F4;border:1px solid var(--line);border-radius:10px;font-size:13px;
+  }
+  .review-row .k{color:var(--ink-soft);flex-shrink:0;}
+  .review-row .v{font-weight:600;text-align:right;}
+  .wiz-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:14px 22px 18px;border-top:1px solid var(--line);flex-shrink:0;
+  }
+  .wizard.loading .wiz-foot{display:none;}
+  .wiz-stepcount{font-size:11.5px;color:var(--ink-soft);}
+  .wiz-hint{font-size:11.5px;color:var(--ink-soft);margin-top:8px;}
+
+  .wiz-loading{text-align:center;padding:30px 6px 14px;}
+  .loader-ring{
+    width:52px;height:52px;border-radius:50%;border:4px solid var(--indigo-pale);
+    border-top-color:var(--indigo);margin:0 auto 18px;animation:spin 0.9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-msg{font-size:13.5px;color:var(--ink-soft);min-height:20px;}
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    position:absolute;left:0;right:0;bottom:0;
+    background:var(--card);border-top:1px solid var(--line);
+    display:flex;padding:8px 4px 10px;z-index:20;flex-shrink:0;
+  }
+  .bottom-nav button{
+    flex:1;background:none;border:none;display:flex;flex-direction:column;
+    align-items:center;gap:4px;padding:6px 2px;color:var(--ink-soft);
+  }
+  .bottom-nav button svg{width:21px;height:21px;}
+  .bottom-nav button span{font-size:10.5px;font-weight:600;}
+  .bottom-nav button.active{color:var(--indigo);}
+  .bottom-nav button.active svg{color:var(--indigo);}
+
+  /* ---------- Card grids (reflow to multi-column on wider screens) ---------- */
+  .card-grid .card{margin-bottom:12px;}
+
+  /* ---------- Tablet and up: cap line length, breathing room ---------- */
+  @media (min-width:640px){
+    .content{max-width:640px;margin:0 auto;padding:22px 24px 90px;}
+    .topbar{padding:16px 24px 12px;}
+  }
+
+  /* ---------- Desktop: permanent sidebar, no bottom nav, multi-column cards ---------- */
+  @media (min-width:900px){
+    .phone{flex-direction:row;max-width:1320px;margin:0 auto;}
+    #menuBtn{display:none;}
+    .scrim{display:none;}
+    .drawer{
+      position:static;transform:none;width:260px;flex-shrink:0;
+      min-height:100vh;min-height:100dvh;border-right:1px solid rgba(239,233,230,0.14);
+    }
+    .bottom-nav{display:none;}
+    .content{max-width:1080px;padding:30px 40px 60px;}
+    .topbar{padding:18px 32px;}
+    .wordmark{display:none;}
+    .notif-pop{top:58px;right:32px;}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px,1fr));gap:16px;}
+    .card-grid .card{margin-bottom:0;}
+    .info-grid{grid-template-columns:repeat(4,1fr);}
+    .profile-hero{text-align:left;display:flex;align-items:center;gap:16px;padding:4px 0 22px;}
+    .profile-hero .profile-avatar{margin:0;}
+  }
+
+  /* ---------- Auth (optional, opened from Profile — not a blocking gate) ---------- */
+  .auth-screen{
+    display:none;position:fixed;inset:0;background:rgba(32,28,22,0.42);
+    align-items:center;justify-content:center;padding:24px;z-index:80;
+  }
+  .auth-screen.show{display:flex;}
+  .auth-card{
+    width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:28px 24px;box-shadow:0 30px 70px -30px rgba(32,28,22,.35);
+    position:relative;
+  }
+  .auth-card .wordmark{display:block;margin-bottom:2px;font-size:22px;}
+  .auth-tag{font-size:12.5px;color:var(--ink-soft);margin-bottom:20px;}
+  .auth-tabs{display:flex;gap:6px;background:var(--indigo-pale);border-radius:10px;padding:4px;margin-bottom:18px;}
+  .auth-tab{flex:1;border:none;background:none;padding:8px;border-radius:8px;font-size:13px;font-weight:600;color:var(--indigo);}
+  .auth-tab.active{background:var(--indigo);color:#fff;}
+  .auth-form{display:none;}
+  .auth-form.active{display:block;}
+  .auth-error{font-size:12.5px;color:#B23A3A;margin:0 0 10px;min-height:1px;}
+  .auth-hint{font-size:11.5px;color:var(--ink-soft);margin-top:12px;text-align:center;}
+  .auth-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--ink-soft);padding:4px;}
+  .app-shell{display:flex;}
+</style>
+</head>
+<body class="app-shell-body">
+
+<!-- Auth gate: shown until the person logs in or registers. Token is kept
+     in memory for this session (see script comment on persistence). -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <button class="auth-close" id="authClose" type="button" aria-label="Close">✕</button>
+    <div class="wordmark">SkillSync</div>
+    <p class="auth-tag">Log in to sync your profile across devices — you're already browsing as a guest.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" type="button">Log in</button>
+      <button class="auth-tab" id="tabRegister" type="button">Create account</button>
+    </div>
+    <p class="auth-error" id="authError"></p>
+
+    <form class="auth-form active" id="formLogin">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" required placeholder="you@example.com" /></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" required placeholder="••••••••" /></div>
+      <button class="btn block" type="submit">Log in</button>
+    </form>
+
+    <form class="auth-form" id="formRegister">
+      <div class="field"><label>Full name</label><input type="text" id="regName" required placeholder="e.g. Rohan Shinde" /></div>
+      <div class="field"><label>Email</label><input type="email" id="regEmail" required placeholder="you@example.com" /></div>
+      <div class="field"><label>Password</label><input type="password" id="regPassword" required minlength="6" placeholder="At least 6 characters" /></div>
+      <button class="btn block" type="submit">Create account</button>
+    </form>
+
+    <p class="auth-hint">SkillSync API must be running at <code id="apiBaseLabel"></code>.</p>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell">
+  <div class="phone">
+
+    <!-- Sidebar (drawer on mobile, permanent nav on desktop) -->
+    <div class="scrim" id="scrim"></div>
+    <div class="drawer" id="drawer">
+      <div class="drawer-head">
+        <div class="name">SkillSync</div>
+        <div class="tag">Bridging skills and industry</div>
+      </div>
+      <nav>
+        <a href="#" data-nav="1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/></svg>
+          Industry Demand
+        </a>
+        <a href="#" data-nav="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.35 4.87 5.15.72-3.75 3.7.9 5.24L12 15.6l-4.65 2.43.9-5.24-3.75-3.7 5.15-.72L12 3.5Z"/></svg>
+          Career Spotlight
+        </a>
+        <a href="#" data-nav="3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 8.5 12 13l10-4.5L12 4Z"/><path d="M6 10.5v4.7c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.7"/></svg>
+          Internships
+        </a>
+        <a href="#" data-nav="4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4v-10Z"/><path d="M12 9.2c0-1 .9-1.4 1.5-1.7.6-.3 1-.6 1-1.2 0-.7-.7-1.2-1.5-1.2s-1.4.4-1.6 1"/><circle cx="12" cy="12.3" r=".55" fill="currentColor" stroke="none"/></svg>
+          Q&amp;A
+        </a>
+        <a href="#" data-nav="5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+          Profile
+        </a>
+        <div class="sep"></div>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l2.6 2.6"/></svg>About SkillSync</a>
+        <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4h3l.4 2.3a6.6 6.6 0 0 1 1.9 1.1l2.2-.8 1.5 2.6-1.8 1.5c.07.4.1.8.1 1.3s-.03.9-.1 1.3l1.8 1.5-1.5 2.6-2.2-.8a6.6 6.6 0 0 1-1.9 1.1L13.5 20h-3l-.4-2.3a6.6 6.6 0 0 1-1.9-1.1l-2.2.8-1.5-2.6 1.8-1.5A6.9 6.9 0 0 1 6.2 12c0-.5.03-.9.1-1.3L4.5 9.2 6 6.6l2.2.8a6.6 6.6 0 0 1 1.9-1.1L10.5 4Z"/><circle cx="12" cy="12" r="2.6"/></svg>Settings</a>
+      </nav>
+      <div class="drawer-foot">SkillSync — a Skill Development &amp; Industry Alignment initiative, Govt. of Maharashtra (prototype)</div>
+    </div>
+
+    <div class="main-col">
+    <!-- Top bar -->
+    <div class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="wordmark">SkillSync</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="bellBtn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M9.5 18a2.5 2.5 0 0 0 5 0"/></svg>
+          <span class="dot"></span>
+        </button>
+        <button class="icon-btn avatar-btn" id="avatarBtn" aria-label="Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification popover -->
+    <div class="notif-pop" id="notifPop">
+      <div class="np-head">Notifications</div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p><b>Vertex Technologies</b> is now hiring for skills matching your profile.</p><div class="t">2 hours ago</div></div></div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p>Your question in Q&amp;A was answered by an expert.</p><div class="t">Yesterday</div></div></div>
+      <div class="notif-item"><div class="notif-dot"></div><div><p>New internship openings added for Data Analytics.</p><div class="t">2 days ago</div></div></div>
+    </div>
+
+    <!-- Content -->
+    <main class="content" id="content">
+
+      <!-- PANEL 1 — Industry Demand -->
+      <section class="panel" id="panel-1">
+        <h1 class="panel-title">Industry Demand</h1>
+        <p class="panel-sub">See what companies are actually hiring for, and where you stand.</p>
+
+        <div class="chip-row" id="chips1">
+          <button class="chip active" data-sub="roadmap">My Roadmap</button>
+          <button class="chip" data-sub="courses">Courses</button>
+          <button class="chip" data-sub="coursedemand">Course Demand by Company</button>
+          <button class="chip" data-sub="skilldemand">Skill Demand by Company</button>
+          <button class="chip" data-sub="experience">Experience Edge</button>
+          <button class="chip" data-sub="achievements">Achievements</button>
+        </div>
+
+        <!-- My Roadmap (AI-assisted, personalised) -->
+        <div class="sub-panel active" data-panel="roadmap">
+          <div id="roadmapEmpty">
+            <div class="card rm-cta">
+              <div class="rm-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>
+              </div>
+              <h3>Get a roadmap built around you</h3>
+              <p>Tell us what you've studied, what you're interested in, the skills you already have, and how much time you can give. SkillSync AI will match you to the right courses and tell you whether YouTube, an offline institute, or a college programme suits you best.</p>
+              <button class="btn" id="btnStartWizard" type="button">Start my roadmap →</button>
+            </div>
+          </div>
+          <div id="roadmapContent" hidden></div>
+        </div>
+
+        <!-- Courses -->
+        <div class="sub-panel" data-panel="courses">
+          <div class="card banner-card" id="recommendedBanner" hidden>
+            <div class="row-between">
+              <div><h3 style="margin-bottom:2px;">Recommended for you</h3><p class="muted" style="margin:0;" id="recommendedBannerText"></p></div>
+              <button class="btn" data-goto-roadmap type="button">View roadmap</button>
+            </div>
+          </div>
+          <div class="card" id="genericCta">
+            <h3>Want a personalised plan instead?</h3>
+            <p class="muted" style="margin:0 0 10px;">Answer a few quick questions and get a step-by-step roadmap matched to your interests and time.</p>
+            <button class="btn block" data-goto-roadmap type="button">Get my roadmap</button>
+          </div>
+
+          <h3 style="margin:18px 0 10px;font-size:14.5px;">Trending courses right now</h3>
+          <div class="card-grid" id="coursesGrid">
+            <p class="muted">Loading courses…</p>
+          </div>
+        </div>
+
+        <!-- Course demand by company -->
+        <div class="sub-panel" data-panel="coursedemand">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
+            <input type="text" id="courseDemandSearch" placeholder="Search a company, e.g. Vertex Technologies" />
+          </div>
+          <div id="courseDemandResults"></div>
+        </div>
+
+        <!-- Skill demand by company -->
+        <div class="sub-panel" data-panel="skilldemand">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
+            <input type="text" id="skillDemandSearch" placeholder="Search a company, e.g. Sahyadri Manufacturing" />
+          </div>
+          <div id="skillDemandResults"></div>
+        </div>
+
+        <!-- Experience edge -->
+        <div class="sub-panel" data-panel="experience">
+          <div class="card">
+            <h3>Why experience matters here</h3>
+            <p class="muted" style="margin:8px 0 0;line-height:1.6;">If you already have work experience — even from another company or field — it strengthens your visibility to recruiters browsing SkillSync. This section highlights that edge on your profile.</p>
+          </div>
+          <div class="card">
+            <div class="row-between"><h3>Add your experience</h3><span class="tag teal">Boosts profile</span></div>
+            <div class="field" style="margin-top:10px;"><label>Company &amp; role</label><input type="text" id="inpExpRole" placeholder="e.g. Junior Analyst, Nimbus Cloud Solutions" /></div>
+            <div class="field"><label>Duration</label><input type="text" id="inpExpDuration" placeholder="e.g. 1 year 4 months" /></div>
+            <button class="btn ghost block" id="btnSaveExperience" type="button">Save to profile</button>
+          </div>
+          <div class="card-grid" id="experienceList" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- Achievements -->
+        <div class="sub-panel" data-panel="achievements">
+          <div class="card">
+            <h3>Achievements give you an edge too</h3>
+            <p class="muted" style="margin:8px 0 0;line-height:1.6;">Hackathon wins, competitive exam ranks, and certifications are optional — but they help your profile stand out to recruiters and training providers.</p>
+          </div>
+          <div class="card">
+            <div class="row-between"><h3>Add an achievement</h3><span class="tag gold">Optional</span></div>
+            <div class="field" style="margin-top:10px;"><label>Title</label><input type="text" id="inpAchievementTitle" placeholder="e.g. Smart India Hackathon — Finalist" /></div>
+            <button class="btn ghost block" id="btnSaveAchievement" type="button">Add to profile</button>
+          </div>
+          <div class="card-grid" id="achievementList" style="margin-top:12px;"></div>
+        </div>
+      </section>
+
+      <!-- PANEL 2 — Career Spotlight -->
+      <section class="panel" id="panel-2" hidden>
+        <h1 class="panel-title">Career Spotlight</h1>
+        <p class="panel-sub">Real journeys from people working at top roles — what they studied, what actually got them there.</p>
+
+        <div class="card-grid" id="spotlightGrid">
+          <p class="muted">Loading stories…</p>
+        </div>
+      </section>
+
+      <!-- PANEL 3 — Internships -->
+      <section class="panel" id="panel-3" hidden>
+        <h1 class="panel-title">Internships</h1>
+        <p class="panel-sub">Which companies are actually taking interns, and from where.</p>
+
+        <div class="chip-row" id="internshipSectorChips">
+          <button class="chip active" data-sector="All sectors">All sectors</button>
+          <button class="chip" data-sector="IT">IT</button>
+          <button class="chip" data-sector="Manufacturing">Manufacturing</button>
+          <button class="chip" data-sector="Finance">Finance</button>
+          <button class="chip" data-sector="Agriculture">Agriculture</button>
+        </div>
+
+        <div class="card banner-card" id="standingBanner" hidden>
+          <h3 style="margin-bottom:6px;">Where you stand right now</h3>
+          <p class="muted" style="margin:0;" id="standingText"></p>
+        </div>
+
+        <div class="card-grid" id="internshipsGrid">
+          <p class="muted">Loading internships…</p>
+        </div>
+      </section>
+
+      <!-- PANEL 4 — Q&A -->
+      <section class="panel" id="panel-4" hidden>
+        <h1 class="panel-title">Q&amp;A</h1>
+        <p class="panel-sub">Ask a question or browse what's already been answered.</p>
+
+        <div class="chip-row" id="chips4">
+          <button class="chip active" data-sub4="expert">Ask an Expert</button>
+          <button class="chip" data-sub4="faq">FAQs</button>
+        </div>
+
+        <div class="sub-panel active" data-panel4="expert">
+          <button class="btn block" id="btnAskQuestion" style="margin-bottom:14px;" type="button">+ Ask a new question</button>
+
+          <div class="card" id="askForm" hidden style="margin-bottom:14px;">
+            <div class="field"><label>Your question</label><input type="text" id="inpQTitle" placeholder="e.g. Is a diploma enough for a core manufacturing role?" /></div>
+            <div class="field"><label>Add detail (optional)</label><textarea id="inpQBody" rows="3" placeholder="Any context that helps someone answer well"></textarea></div>
+            <button class="btn block" id="btnSubmitQuestion" type="button">Post question</button>
+          </div>
+
+          <div class="card-grid" id="questionsGrid">
+            <p class="muted">Loading questions…</p>
+          </div>
+        </div>
+
+        <div class="sub-panel" data-panel4="faq">
+          <div id="faqAccordion">
+            <p class="muted">Loading FAQs…</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 5 — Profile -->
+      <section class="panel" id="panel-5" hidden>
+        <div class="profile-hero">
+          <div class="profile-avatar" id="profAvatar">?</div>
+          <h2 id="profName">Your profile</h2>
+          <div class="role" id="profRole">Take the roadmap assessment to fill this in</div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-cell"><div class="l">Field of study</div><div class="v" id="profField">—</div></div>
+          <div class="info-cell"><div class="l">Education level</div><div class="v" id="profLevel">—</div></div>
+          <div class="info-cell"><div class="l">Time available</div><div class="v" id="profTime">—</div></div>
+          <div class="info-cell"><div class="l">Preferred mode</div><div class="v" id="profMode">—</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;" id="profInterestsCard" hidden>
+          <h3 style="margin-bottom:8px;">Interested in</h3>
+          <div class="pill-wrap" id="profInterests"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;" id="profSkillsCard" hidden>
+          <h3 style="margin-bottom:8px;">Skills you already have</h3>
+          <div class="pill-wrap" id="profSkills"></div>
+        </div>
+
+        <button class="btn block" id="btnRetake" style="margin-bottom:18px;" type="button">Take / retake the roadmap assessment</button>
+
+        <div class="card">
+          <div class="list-item">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l5 5v11H6V4Z"/><path d="M15 4v5h5"/></svg>Saved courses</div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>My applications</div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item" id="btnAccountSettings" role="button" tabindex="0">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4h3l.4 2.3a6.6 6.6 0 0 1 1.9 1.1l2.2-.8 1.5 2.6-1.8 1.5c.07.4.1.8.1 1.3s-.03.9-.1 1.3l1.8 1.5-1.5 2.6-2.2-.8a6.6 6.6 0 0 1-1.9 1.1L13.5 20h-3l-.4-2.3a6.6 6.6 0 0 1-1.9-1.1l-2.2.8-1.5-2.6 1.8-1.5A6.9 6.9 0 0 1 6.2 12c0-.5.03-.9.1-1.3L4.5 9.2 6 6.6l2.2.8a6.6 6.6 0 0 1 1.9-1.1L10.5 4Z"/><circle cx="12" cy="12" r="2.6"/></svg><span id="acctSettingsLabel">Log in / Create account</span></div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+          <div class="list-item logout" id="btnLogout" role="button" tabindex="0">
+            <div class="l-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg><span id="logoutLabel">Reset guest session</span></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button data-tab="1" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/></svg>
+        <span>Demand</span>
+      </button>
+      <button data-tab="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.35 4.87 5.15.72-3.75 3.7.9 5.24L12 15.6l-4.65 2.43.9-5.24-3.75-3.7 5.15-.72L12 3.5Z"/></svg>
+        <span>Spotlight</span>
+      </button>
+      <button data-tab="3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 8.5 12 13l10-4.5L12 4Z"/><path d="M6 10.5v4.7c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.7"/></svg>
+        <span>Interns</span>
+      </button>
+      <button data-tab="4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4v-10Z"/></svg>
+        <span>Q&amp;A</span>
+      </button>
+      <button data-tab="5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-3.6 4-5.3 7-5.3s5.8 1.7 7 5.3"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+    </div>
+
+  </div>
+
+  <!-- Roadmap wizard -->
+  <div class="wiz-scrim" id="wizScrim"></div>
+  <div class="wizard" id="wizard" role="dialog" aria-modal="true" aria-label="Build my roadmap">
+    <div class="wiz-head">
+      <div class="wiz-progress"><div class="wiz-progress-fill" id="wizProgressFill"></div></div>
+      <button class="wiz-close" id="wizClose" aria-label="Close" type="button">&times;</button>
+    </div>
+    <div class="wiz-body" id="wizBody">
+
+      <div class="wiz-step active" data-step="1">
+        <h2 class="wiz-title">Let's start with you</h2>
+        <p class="wiz-sub">A few basics so everything that follows is built around you.</p>
+        <div class="field"><label>Your name</label><input type="text" id="inpName" placeholder="e.g. Rohan Shinde" /></div>
+        <div class="field">
+          <label>Education level</label>
+          <div class="opt-grid" id="grpLevel">
+            <button class="opt-chip" data-val="10th" type="button">10th</button>
+            <button class="opt-chip" data-val="12th" type="button">12th</button>
+            <button class="opt-chip" data-val="iti" type="button">ITI</button>
+            <button class="opt-chip" data-val="diploma" type="button">Diploma</button>
+            <button class="opt-chip" data-val="ug" type="button">Undergraduate</button>
+            <button class="opt-chip" data-val="pg" type="button">Postgraduate</button>
+          </div>
+        </div>
+        <div class="field"><label>Field / course studied</label><input type="text" id="inpField" placeholder="e.g. Computer Engineering, Commerce, Mechanical" /></div>
+      </div>
+
+      <div class="wiz-step" data-step="2">
+        <h2 class="wiz-title">What are you interested in?</h2>
+        <p class="wiz-sub">Pick as many as genuinely interest you — we'll rank the best fit for you.</p>
+        <div class="opt-grid" id="grpInterests">
+          <button class="opt-chip" data-val="web" type="button">Web Development</button>
+          <button class="opt-chip" data-val="data" type="button">Data Analytics</button>
+          <button class="opt-chip" data-val="cloud" type="button">Cloud &amp; DevOps</button>
+          <button class="opt-chip" data-val="aiml" type="button">AI &amp; Machine Learning</button>
+          <button class="opt-chip" data-val="design" type="button">UI/UX &amp; Product Design</button>
+          <button class="opt-chip" data-val="core" type="button">Core / Manufacturing Engg.</button>
+          <button class="opt-chip" data-val="electronics" type="button">Electronics &amp; Embedded</button>
+          <button class="opt-chip" data-val="finance" type="button">Finance &amp; Accounting</button>
+          <button class="opt-chip" data-val="agri" type="button">Agriculture &amp; Agri-Tech</button>
+          <button class="opt-chip" data-val="health" type="button">Healthcare &amp; Allied Sciences</button>
+          <button class="opt-chip" data-val="marketing" type="button">Digital Marketing</button>
+          <button class="opt-chip" data-val="business" type="button">Entrepreneurship &amp; Business</button>
+        </div>
+      </div>
+
+      <div class="wiz-step" data-step="3">
+        <h2 class="wiz-title">What skills do you already have?</h2>
+        <p class="wiz-sub">Optional, but it helps us skip what you already know. Add each skill with your level, then tap Add.</p>
+        <div class="skill-row">
+          <input type="text" id="inpSkillName" placeholder="e.g. Excel, Python, AutoCAD" />
+          <select id="inpSkillLevel">
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+          <button class="btn" id="btnAddSkill" type="button">Add</button>
+        </div>
+        <div class="skill-list" id="skillList"></div>
+        <p class="wiz-hint">No existing skills? That's fine — skip ahead.</p>
+      </div>
+
+      <div class="wiz-step" data-step="4">
+        <h2 class="wiz-title">Time and learning style</h2>
+        <p class="wiz-sub">This decides how we pace your roadmap and which resources we suggest first.</p>
+        <div class="field">
+          <label>How much time can you give overall?</label>
+          <div class="opt-grid" id="grpTime">
+            <button class="opt-chip" data-val="2-4w" type="button">2–4 weeks</button>
+            <button class="opt-chip" data-val="1-3m" type="button">1–3 months</button>
+            <button class="opt-chip" data-val="3-6m" type="button">3–6 months</button>
+            <button class="opt-chip" data-val="6-12m" type="button">6–12 months</button>
+            <button class="opt-chip" data-val="1y+" type="button">1 year+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Hours per week you can realistically give</label>
+          <div class="opt-grid" id="grpHours">
+            <button class="opt-chip" data-val="<5" type="button">Under 5 hrs</button>
+            <button class="opt-chip" data-val="5-10" type="button">5–10 hrs</button>
+            <button class="opt-chip" data-val="10-20" type="button">10–20 hrs</button>
+            <button class="opt-chip" data-val="20+" type="button">20+ hrs</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>How do you prefer to learn?</label>
+          <div class="opt-grid" id="grpMode">
+            <button class="opt-chip" data-val="online" type="button">Online (self-paced videos/courses)</button>
+            <button class="opt-chip" data-val="offline" type="button">Offline classes / training institute</button>
+            <button class="opt-chip" data-val="college" type="button">College-integrated programme</button>
+            <button class="opt-chip" data-val="none" type="button">No preference — show best fit</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wiz-step" data-step="5">
+        <h2 class="wiz-title">Review your details</h2>
+        <p class="wiz-sub">Make sure this looks right before SkillSync AI builds your roadmap.</p>
+        <div class="review-grid" id="reviewGrid"></div>
+      </div>
+
+      <div class="wiz-step" data-step="loading">
+        <div class="wiz-loading">
+          <div class="loader-ring"></div>
+          <div class="wiz-title" style="font-size:16px;">SkillSync AI is analysing your profile</div>
+          <div class="loading-msg" id="loadingMsg">Reading your answers…</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="wiz-foot" id="wizFoot">
+      <button class="btn ghost" id="wizBack" type="button">Back</button>
+      <span class="wiz-stepcount" id="wizStepCount">Step 1 of 5</span>
+      <button class="btn" id="wizNext" type="button">Next</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* =========================================================
+     SkillSync — connected frontend
+     Talks to the skillsync-backend API for auth, roadmap
+     generation (rule-based, or AI-enriched via Claude if the
+     backend has an ANTHROPIC_API_KEY configured), industry
+     demand, career spotlight, internships, and Q&A.
+     ========================================================= */
+
+  // ---------------------------------------------------------------------
+  // BACKEND URL CONFIG — this is the ONLY line you need to change.
+  //
+  // This file is a plain static HTML file — GitHub Pages (or any static
+  // host) can serve it, but it CANNOT run the Node.js backend for you.
+  // The backend (skillsync-backend/) has to be deployed separately to a
+  // service that runs Node servers, e.g. Render, Railway, or Fly.io —
+  // then you paste that service's URL below.
+  //
+  // While testing on your own machine (opening this file locally, or
+  // running it through a local static server) it auto-uses
+  // http://localhost:4000/api, so `npm start` in skillsync-backend is all
+  // you need for local dev — nothing to edit here for that case.
+  //
+  // Once you deploy the backend, replace the placeholder URL below with
+  // its real address, e.g. 'https://skillsync-backend.onrender.com/api',
+  // then push this file to your GitHub repo / Pages site.
+  // ---------------------------------------------------------------------
+  // The website and the API now live on the SAME address (the backend
+  // serves this file), so we just use a relative path. Nothing to edit here.
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:')
+    ? 'http://localhost:4000/api'
+    : '/api';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const label = document.getElementById('apiBaseLabel');
+    if (label) label.textContent = API_BASE;
+    if (API_BASE.includes('YOUR-BACKEND-URL')) {
+      console.warn('SkillSync: API_BASE is still the placeholder. Deploy skillsync-backend and edit DEPLOYED_BACKEND_URL near the top of the <script> tag.');
+      const bar = document.createElement('div');
+      bar.textContent = '⚠ Backend URL not configured yet — edit DEPLOYED_BACKEND_URL near the top of this file\'s <script> tag. See README for deployment steps.';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;font:13px/1.4 system-ui,sans-serif;padding:8px 14px;text-align:center;';
+      document.body.prepend(bar);
+    }
+    ensureSession();
+  });
+
+  // Auth token lives in memory for this page session. The login screen is
+  // no longer a blocking gate: on load we silently sign in (or create) a
+  // guest account, kept in localStorage, so every backend feature works
+  // right away. Someone who wants a real, persistent account can still log
+  // in or register from Profile → "Log in / Create account" — that just
+  // upgrades the current session to their real account.
+  let authToken = null;
+  let currentUser = null;
+  let isGuest = true;
+  const GUEST_KEY = 'skillsync_guest_v1';
+
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : String(str);
+    return d.innerHTML;
+  }
+
+  async function apiFetch(path, options = {}) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* no body */ }
+    if (!res.ok) {
+      const message = (data && data.error) || `Request failed (${res.status})`;
+      throw new Error(message);
+    }
+    return data;
+  }
+
+  /* ---------------- Auth (guest auto-session + optional modal) ---------------- */
+
+  const authScreen = document.getElementById('authScreen');
+  const appShell = document.getElementById('appShell');
+  const authError = document.getElementById('authError');
+  const tabLogin = document.getElementById('tabLogin');
+  const tabRegister = document.getElementById('tabRegister');
+  const formLogin = document.getElementById('formLogin');
+  const formRegister = document.getElementById('formRegister');
+  const authClose = document.getElementById('authClose');
+  const acctSettingsLabel = document.getElementById('acctSettingsLabel');
+  const logoutLabel = document.getElementById('logoutLabel');
+
+  function openAuthModal(){ authError.textContent = ''; authScreen.classList.add('show'); }
+  function closeAuthModal(){ authScreen.classList.remove('show'); }
+
+  authClose.addEventListener('click', closeAuthModal);
+  authScreen.addEventListener('click', (e) => { if (e.target === authScreen) closeAuthModal(); });
+  document.getElementById('btnAccountSettings').addEventListener('click', openAuthModal);
+
+  tabLogin.addEventListener('click', () => {
+    tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+    formLogin.classList.add('active'); formRegister.classList.remove('active');
+    authError.textContent = '';
+  });
+  tabRegister.addEventListener('click', () => {
+    tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+    formRegister.classList.add('active'); formLogin.classList.remove('active');
+    authError.textContent = '';
+  });
+
+  formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authError.textContent = '';
+    try {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const { token, user } = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      await onAuthSuccess(token, user, false);
+      closeAuthModal();
+    } catch (err) {
+      authError.textContent = err.message;
+    }
+  });
+
+  formRegister.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authError.textContent = '';
+    try {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const { token, user } = await apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) });
+      await onAuthSuccess(token, user, false);
+      closeAuthModal();
+    } catch (err) {
+      authError.textContent = err.message;
+    }
+  });
+
+  async function onAuthSuccess(token, user, asGuest) {
+    authToken = token;
+    currentUser = user;
+    isGuest = !!asGuest;
+    acctSettingsLabel.textContent = isGuest ? 'Log in / Create account' : `Signed in as ${user.name || user.email}`;
+    logoutLabel.textContent = isGuest ? 'Reset guest session' : 'Log out';
+    await loadEverything();
+  }
+
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    localStorage.removeItem(GUEST_KEY);
+    authToken = null;
+    currentUser = null;
+    formLogin.reset();
+    formRegister.reset();
+    switchTab('1');
+    await ensureSession(); // provisions a brand-new guest account
+  });
+
+  // Provision or restore a guest session automatically, with no UI gate.
+  async function ensureSession() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null'); } catch (e) { /* ignore */ }
+
+    if (saved && saved.email && saved.password) {
+      try {
+        const { token, user } = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email: saved.email, password: saved.password }) });
+        await onAuthSuccess(token, user, true);
+        return;
+      } catch (e) { /* saved guest no longer valid — fall through and create a new one */ }
+    }
+
+    const rand = Math.random().toString(36).slice(2, 10);
+    const guest = { name: 'Guest', email: `guest-${rand}@skillsync.local`, password: `guest-${rand}-${Date.now()}` };
+    try {
+      const { token, user } = await apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(guest) });
+      localStorage.setItem(GUEST_KEY, JSON.stringify({ email: guest.email, password: guest.password }));
+      await onAuthSuccess(token, user, true);
+    } catch (e) {
+      // Backend unreachable — the app shell still renders; feature calls will
+      // surface their own error toasts rather than blocking the whole page.
+      console.error('Could not start a guest session:', e.message);
+    }
+  }
+
+  /* ---------------- Drawer ---------------- */
+  const drawer = document.getElementById('drawer');
+  const scrim = document.getElementById('scrim');
+  const menuBtn = document.getElementById('menuBtn');
+  function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('show'); }
+  menuBtn.addEventListener('click', () => { drawer.classList.add('open'); scrim.classList.add('show'); closeNotif(); });
+  scrim.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('a[data-nav]').forEach(a => {
+    a.addEventListener('click', (e) => { e.preventDefault(); switchTab(a.dataset.nav); closeDrawer(); });
+  });
+
+  /* ---------------- Notifications ---------------- */
+  const notifPop = document.getElementById('notifPop');
+  const bellBtn = document.getElementById('bellBtn');
+  function closeNotif(){ notifPop.classList.remove('show'); }
+  bellBtn.addEventListener('click', (e) => { e.stopPropagation(); notifPop.classList.toggle('show'); });
+  document.addEventListener('click', (e) => { if(!notifPop.contains(e.target) && e.target !== bellBtn) closeNotif(); });
+
+  document.getElementById('avatarBtn').addEventListener('click', () => switchTab('5'));
+
+  /* ---------------- Tabs ---------------- */
+  const navButtons = document.querySelectorAll('#bottomNav button');
+  const panels = document.querySelectorAll('.panel');
+  function switchTab(tab){
+    panels.forEach(p => p.hidden = (p.id !== 'panel-' + tab));
+    navButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('content').scrollTop = 0;
+  }
+  navButtons.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+  const chips1 = document.querySelectorAll('#chips1 .chip');
+  const subs1 = document.querySelectorAll('#panel-1 .sub-panel');
+  chips1.forEach(c => c.addEventListener('click', () => {
+    chips1.forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    subs1.forEach(s => s.classList.toggle('active', s.dataset.panel === c.dataset.sub));
+  }));
+
+  const chips4 = document.querySelectorAll('#chips4 .chip');
+  const subs4 = document.querySelectorAll('#panel-4 .sub-panel');
+  chips4.forEach(c => c.addEventListener('click', () => {
+    chips4.forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    subs4.forEach(s => s.classList.toggle('active', s.dataset.panel4 === c.dataset.sub4));
+  }));
+
+  function activateSub1(subName){
+    chips1.forEach(x => x.classList.toggle('active', x.dataset.sub === subName));
+    subs1.forEach(s => s.classList.toggle('active', s.dataset.panel === subName));
+  }
+  document.querySelectorAll('[data-goto-roadmap]').forEach(btn => {
+    btn.addEventListener('click', () => { switchTab('1'); activateSub1('roadmap'); });
+  });
+
+  /* ---------------- Label maps (mirror backend's roadmapEngine.js) ---------------- */
+  const LEVEL_LABELS = {'10th':'10th standard','12th':'12th standard','iti':'ITI','diploma':'Diploma','ug':'Undergraduate','pg':'Postgraduate'};
+  const TIME_LABELS  = {'2-4w':'2–4 weeks','1-3m':'1–3 months','3-6m':'3–6 months','6-12m':'6–12 months','1y+':'1 year+'};
+  const HOURS_LABELS = {'<5':'Under 5 hrs/week','5-10':'5–10 hrs/week','10-20':'10–20 hrs/week','20+':'20+ hrs/week'};
+  const MODE_LABELS  = {'online':'Online / self-paced','offline':'Offline institute','college':'College-integrated','none':'No preference'};
+  const TRACK_INTEREST_LABELS = {
+    web:'Web Development', data:'Data Analytics', cloud:'Cloud & DevOps', aiml:'AI & Machine Learning',
+    design:'UI/UX & Product Design', core:'Core / Manufacturing Engg.', electronics:'Electronics & Embedded',
+    finance:'Finance & Accounting', agri:'Agriculture & Agri-Tech', health:'Healthcare & Allied Sciences',
+    marketing:'Digital Marketing', business:'Entrepreneurship & Business'
+  };
+
+  const RESOURCE_ICONS = {
+    'Online': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M9 20h6M12 18v2"/></svg>',
+    'Offline institute': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 5l8 5.5-8 5.5-8-5.5Z"/><path d="M7 12.5V17c0 1 2.2 2 5 2s5-1 5-2v-4.5"/></svg>',
+    'College programme': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M6 10.5v5.5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-5.5"/></svg>'
+  };
+
+  /* ---------------- Load everything after login ---------------- */
+  async function loadEverything(){
+    await Promise.all([
+      loadProfileAndRoadmap(),
+      loadCourses(),
+      loadSpotlight(),
+      loadInternships('All sectors'),
+      loadQuestions(),
+      loadFaqs()
+    ]);
+  }
+
+  /* ================= ROADMAP (page 1) ================= */
+
+  async function loadProfileAndRoadmap(){
+    try {
+      const { profile } = await apiFetch('/profile');
+      renderProfileSummary(profile);
+      try {
+        const roadmap = await apiFetch('/roadmap/latest');
+        renderRoadmapFromServer(roadmap);
+      } catch (e) {
+        // No roadmap generated yet — leave the CTA card showing.
+      }
+    } catch (err) {
+      console.error('Failed to load profile', err);
+    }
+  }
+
+  function renderProfileSummary(profile){
+    document.getElementById('profField').textContent = profile.field || '—';
+    document.getElementById('profLevel').textContent = LEVEL_LABELS[profile.level] || '—';
+    document.getElementById('profTime').textContent = TIME_LABELS[profile.time] || '—';
+    document.getElementById('profMode').textContent = MODE_LABELS[profile.mode] || '—';
+    document.getElementById('profName').textContent = currentUser.name || 'Your profile';
+    document.getElementById('profRole').textContent = `${LEVEL_LABELS[profile.level] || ''}${profile.field ? ', ' + profile.field : ''}`.replace(/^, /,'') || 'Take the roadmap assessment to fill this in';
+    const initials = (currentUser.name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase() || '?';
+    document.getElementById('profAvatar').textContent = initials;
+
+    const intCard = document.getElementById('profInterestsCard');
+    const intWrap = document.getElementById('profInterests');
+    if(profile.interests && profile.interests.length){
+      intCard.hidden = false;
+      intWrap.innerHTML = profile.interests.map(k => `<span class="interest-pill">${esc(TRACK_INTEREST_LABELS[k] || k)}</span>`).join('');
+    } else { intCard.hidden = true; }
+
+    const skCard = document.getElementById('profSkillsCard');
+    const skWrap = document.getElementById('profSkills');
+    if(profile.skills && profile.skills.length){
+      skCard.hidden = false;
+      skWrap.innerHTML = profile.skills.map(s => `<span class="pill">${esc(s.name)} · ${esc(s.level)}</span>`).join('');
+    } else { skCard.hidden = true; }
+
+    const expList = document.getElementById('experienceList');
+    if (expList) {
+      expList.innerHTML = (profile.experience || []).map(e => `
+        <div class="card"><h3>${esc(e.company_role)}</h3><p class="muted" style="margin:4px 0 0;">${esc(e.duration || '')}</p></div>
+      `).join('');
+    }
+    const achList = document.getElementById('achievementList');
+    if (achList) {
+      achList.innerHTML = (profile.achievements || []).map(a => `
+        <div class="card"><h3 style="font-size:14px;">${esc(a.title)}</h3></div>
+      `).join('');
+    }
+  }
+
+  function renderRoadmapFromServer(roadmap){
+    const empty = document.getElementById('roadmapEmpty');
+    const wrap = document.getElementById('roadmapContent');
+    empty.hidden = true; wrap.hidden = false;
+
+    const matched = roadmap.matched; // array of {track:{key,label}, stages:[...], totalWeeks, summary?}
+    const name = roadmap.name;
+
+    let switchHtml = '';
+    if (matched.length > 1) {
+      switchHtml = `<div class="track-switch" id="trackSwitch">` +
+        matched.map((m,i) => `<button class="chip${i===0?' active':''}" data-idx="${i}" type="button">${esc(m.track.label)}</button>`).join('') +
+        `</div>`;
+    }
+
+    wrap.innerHTML = `
+      <div class="ai-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="3.4"/></svg>${roadmap.source === 'ai' ? 'Built by SkillSync AI (Claude)' : 'Built by SkillSync AI'}</div>
+      <div class="rm-head">
+        <div><h2>${name ? esc(name) + "'s roadmap" : 'Your roadmap'}</h2>
+        <p class="muted" style="margin:0;">${matched[0].summary ? esc(matched[0].summary) : `Matched to your interests and available time.`}</p></div>
+        <button class="btn ghost" id="btnRetakeInline" type="button">Retake</button>
+      </div>
+      ${switchHtml}
+      <div id="trackBody"></div>
+    `;
+
+    function renderTrack(idx){
+      const m = matched[idx];
+      const body = document.getElementById('trackBody');
+      body.innerHTML = `
+        <div class="rm-summary-row">
+          <div class="rm-stat"><b>${esc(m.track.label)}</b>Recommended track</div>
+          <div class="rm-stat"><b>${m.totalWeeks} wks</b>Total roadmap length</div>
+          <div class="rm-stat"><b>${esc(roadmap.labels && roadmap.labels.hours || '—')}</b>Weekly commitment</div>
+          <div class="rm-stat"><b>${esc(roadmap.labels && roadmap.labels.mode || 'Best fit')}</b>Preferred mode</div>
+        </div>
+        <div class="timeline">
+          ${m.stages.map(s => `
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="card">
+                <div class="tl-week">${s.weeks} week${s.weeks===1?'':'s'}</div>
+                <h3>${esc(s.title)}</h3>
+                <p class="muted" style="margin:0;">${esc(s.focus)}</p>
+                <div class="tl-skills">${s.skills.map(sk => `<span class="pill">${esc(sk)}</span>`).join('')}</div>
+                <div class="resource-card">
+                  <div class="resource-icon">${RESOURCE_ICONS[s.resource.type] || ''}</div>
+                  <div>
+                    <p class="rc-type">${esc(s.resource.type)}</p>
+                    <p class="rc-name">${esc(s.resource.name)}</p>
+                    <p class="rc-note">${esc(s.resource.note)}</p>
+                  </div>
+                </div>
+                ${renderDayWise(s.dayWise)}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderDayWise(dayWise){
+      if (!dayWise || !dayWise.length || !dayWise[0].days || !dayWise[0].days.length) return '';
+      const week1 = dayWise[0];
+      return `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--indigo);">Day-by-day plan for week ${week1.week}</summary>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+            ${week1.days.map(d => `
+              <div style="font-size:12.5px;line-height:1.5;"><b>Day ${d.day} — ${esc(d.focus)}:</b> ${esc(d.task)}</div>
+            `).join('')}
+          </div>
+        </details>
+      `;
+    }
+
+    renderTrack(0);
+    if (matched.length > 1) {
+      document.querySelectorAll('#trackSwitch .chip').forEach(c => {
+        c.addEventListener('click', () => {
+          document.querySelectorAll('#trackSwitch .chip').forEach(x => x.classList.remove('active'));
+          c.classList.add('active');
+          renderTrack(Number(c.dataset.idx));
+        });
+      });
+    }
+    document.getElementById('btnRetakeInline').addEventListener('click', openWizard);
+
+    const banner = document.getElementById('recommendedBanner');
+    const bannerText = document.getElementById('recommendedBannerText');
+    document.getElementById('genericCta').hidden = true;
+    banner.hidden = false;
+    bannerText.textContent = matched.map(m => m.track.label).join(' · ');
+  }
+
+  document.getElementById('btnRetake').addEventListener('click', openWizard);
+
+  /* ---------------- Wizard controller ---------------- */
+
+  const wizScrim = document.getElementById('wizScrim');
+  const wizard = document.getElementById('wizard');
+  const wizBack = document.getElementById('wizBack');
+  const wizNext = document.getElementById('wizNext');
+  const wizClose = document.getElementById('wizClose');
+  const wizProgressFill = document.getElementById('wizProgressFill');
+  const wizStepCount = document.getElementById('wizStepCount');
+
+  let wizStep = 1;
+  const TOTAL_STEPS = 5;
+  let draft = null;
+
+  function freshDraft(){
+    return {name:'', level:'', field:'', interests:[], skills:[], time:'', hours:'', mode:''};
+  }
+
+  function openWizard(){
+    draft = freshDraft();
+    wizStep = 1;
+    document.getElementById('inpName').value = '';
+    document.getElementById('inpField').value = '';
+    document.getElementById('skillList').innerHTML = '';
+    document.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+    wizard.classList.remove('loading');
+    updateWizardUI();
+    wizScrim.classList.add('show');
+    wizard.classList.add('show');
+  }
+  function closeWizard(){
+    wizScrim.classList.remove('show');
+    wizard.classList.remove('show');
+  }
+  wizClose.addEventListener('click', closeWizard);
+  wizScrim.addEventListener('click', closeWizard);
+  document.getElementById('btnStartWizard').addEventListener('click', openWizard);
+
+  function updateWizardUI(){
+    document.querySelectorAll('.wiz-step').forEach(el => el.classList.toggle('active', el.dataset.step === String(wizStep)));
+    wizProgressFill.style.width = (wizStep/TOTAL_STEPS*100) + '%';
+    wizStepCount.textContent = `Step ${wizStep} of ${TOTAL_STEPS}`;
+    wizBack.style.visibility = wizStep === 1 ? 'hidden' : 'visible';
+    wizNext.textContent = wizStep === TOTAL_STEPS ? 'Analyse & build my roadmap' : 'Next';
+    if(wizStep === TOTAL_STEPS) renderReview();
+  }
+
+  function singleSelectGroup(groupId, onPick){
+    document.querySelectorAll(`#${groupId} .opt-chip`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`#${groupId} .opt-chip`).forEach(x => x.classList.remove('selected'));
+        btn.classList.add('selected');
+        onPick(btn.dataset.val);
+      });
+    });
+  }
+  singleSelectGroup('grpLevel', v => draft.level = v);
+  singleSelectGroup('grpTime', v => draft.time = v);
+  singleSelectGroup('grpHours', v => draft.hours = v);
+  singleSelectGroup('grpMode', v => draft.mode = v);
+
+  document.querySelectorAll('#grpInterests .opt-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.val;
+      const idx = draft.interests.indexOf(val);
+      if(idx === -1){ draft.interests.push(val); btn.classList.add('selected'); }
+      else { draft.interests.splice(idx,1); btn.classList.remove('selected'); }
+    });
+  });
+
+  function renderSkillList(){
+    const wrap = document.getElementById('skillList');
+    wrap.innerHTML = draft.skills.map((s,i) => `<span class="skill-pill">${esc(s.name)} · ${esc(s.level)}<button type="button" data-i="${i}" aria-label="Remove">&times;</button></span>`).join('');
+    wrap.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      draft.skills.splice(Number(b.dataset.i),1);
+      renderSkillList();
+    }));
+  }
+  document.getElementById('btnAddSkill').addEventListener('click', () => {
+    const nameInp = document.getElementById('inpSkillName');
+    const levelSel = document.getElementById('inpSkillLevel');
+    const name = nameInp.value.trim();
+    if(!name) return;
+    draft.skills.push({name, level: levelSel.value});
+    nameInp.value = '';
+    renderSkillList();
+  });
+
+  function renderReview(){
+    draft.name = document.getElementById('inpName').value.trim();
+    draft.field = document.getElementById('inpField').value.trim();
+    const grid = document.getElementById('reviewGrid');
+    grid.innerHTML = `
+      <div class="review-row"><span class="k">Name</span><span class="v">${esc(draft.name) || '—'}</span></div>
+      <div class="review-row"><span class="k">Education level</span><span class="v">${LEVEL_LABELS[draft.level] || '—'}</span></div>
+      <div class="review-row"><span class="k">Field of study</span><span class="v">${esc(draft.field) || '—'}</span></div>
+      <div class="review-row"><span class="k">Interests</span><span class="v">${draft.interests.map(k=>esc(TRACK_INTEREST_LABELS[k]||k)).join(', ') || '—'}</span></div>
+      <div class="review-row"><span class="k">Skills</span><span class="v">${draft.skills.map(s=>esc(s.name)).join(', ') || 'None yet'}</span></div>
+      <div class="review-row"><span class="k">Time available</span><span class="v">${TIME_LABELS[draft.time] || '—'}</span></div>
+      <div class="review-row"><span class="k">Weekly hours</span><span class="v">${HOURS_LABELS[draft.hours] || '—'}</span></div>
+      <div class="review-row"><span class="k">Preferred mode</span><span class="v">${MODE_LABELS[draft.mode] || '—'}</span></div>
+    `;
+  }
+
+  function validateStep(step){
+    if(step === 1){
+      draft.field = document.getElementById('inpField').value.trim();
+      if(!draft.level){ alert('Please choose your education level.'); return false; }
+      if(!draft.field){ alert('Please tell us the field or course you studied.'); return false; }
+    }
+    if(step === 2 && draft.interests.length === 0){
+      alert('Pick at least one interest so we can build your roadmap.');
+      return false;
+    }
+    if(step === 4){
+      if(!draft.time){ alert('Choose how much time you can give overall.'); return false; }
+      if(!draft.hours){ alert('Choose roughly how many hours a week you can give.'); return false; }
+      if(!draft.mode){ alert('Choose how you prefer to learn.'); return false; }
+    }
+    return true;
+  }
+
+  const LOADING_MESSAGES = [
+    'Reading your answers…',
+    'Matching your interests to industry demand…',
+    'Weighing your existing skills…',
+    'Fitting the plan to your time budget…',
+    'Choosing between online, offline and college paths…',
+    'Building your roadmap…'
+  ];
+
+  async function runAnalysis(){
+    draft.name = document.getElementById('inpName').value.trim();
+    wizard.classList.add('loading');
+    document.querySelectorAll('.wiz-step').forEach(el => el.classList.remove('active'));
+    document.querySelector('.wiz-step[data-step="loading"]').classList.add('active');
+    const msgEl = document.getElementById('loadingMsg');
+    let i = 0;
+    msgEl.textContent = LOADING_MESSAGES[0];
+    const interval = setInterval(() => {
+      i = (i + 1) % LOADING_MESSAGES.length;
+      msgEl.textContent = LOADING_MESSAGES[i];
+    }, 480);
+
+    try {
+      const roadmap = await apiFetch('/roadmap/generate', { method: 'POST', body: JSON.stringify(draft) });
+      clearInterval(interval);
+      wizard.classList.remove('loading');
+      closeWizard();
+      const { profile } = await apiFetch('/profile');
+      renderProfileSummary(profile);
+      renderRoadmapFromServer(roadmap);
+      switchTab('1');
+      activateSub1('roadmap');
+    } catch (err) {
+      clearInterval(interval);
+      wizard.classList.remove('loading');
+      document.querySelectorAll('.wiz-step').forEach(el => el.classList.toggle('active', el.dataset.step === String(TOTAL_STEPS)));
+      alert('Could not build your roadmap: ' + err.message + '\n\nMake sure the SkillSync backend is running at ' + API_BASE + '.');
+    }
+  }
+
+  wizNext.addEventListener('click', () => {
+    if(wizStep < TOTAL_STEPS){
+      if(!validateStep(wizStep)) return;
+      wizStep++;
+      updateWizardUI();
+    } else {
+      if(!validateStep(TOTAL_STEPS)) return;
+      runAnalysis();
+    }
+  });
+  wizBack.addEventListener('click', () => {
+    if(wizStep > 1){ wizStep--; updateWizardUI(); }
+  });
+
+  /* ================= Industry demand: courses + company search ================= */
+
+  async function loadCourses(){
+    try {
+      const { courses } = await apiFetch('/industry/courses');
+      const grid = document.getElementById('coursesGrid');
+      grid.innerHTML = courses.map(c => `
+        <div class="card">
+          <div class="row-between"><h3>${esc(c.title)}</h3><span class="tag ${c.demand_tag === 'High demand' ? 'gold' : 'teal'}">${esc(c.demand_tag)}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${c.demand_pct}%;"></div></div>
+          <p class="muted" style="margin-top:8px;">${esc(c.note)}</p>
+        </div>
+      `).join('') || `<p class="muted">No course data yet.</p>`;
+    } catch (err) { console.error('courses', err); }
+  }
+
+  function companyResultCard(company, kind){
+    if (!company) return `<p class="muted">No data found for that company yet.</p>`;
+    const items = kind === 'course' ? company.topCourses : company.topSkills;
+    const heading = kind === 'course' ? 'Top courses this company is hiring for:' : 'Most in-demand skills at this company:';
+    return `
+      <div class="card">
+        <div class="row-between" style="margin-bottom:10px;"><h3>${esc(company.name)}</h3><span class="tag indigo">${esc(company.sector)}</span></div>
+        <p class="muted" style="margin:0 0 8px;">${heading}</p>
+        <div class="pill-wrap">${items.map(i => `<span class="pill">${esc(i)}</span>`).join('')}</div>
+      </div>
+    `;
+  }
+
+  async function searchCompany(query, kind, targetElId){
+    const target = document.getElementById(targetElId);
+    if (!query) { target.innerHTML = ''; return; }
+    try {
+      const { companies } = await apiFetch(`/industry/companies?search=${encodeURIComponent(query)}`);
+      target.innerHTML = companies.length
+        ? companies.map(c => companyResultCard(c, kind)).join('')
+        : `<p class="muted">No company matching "${esc(query)}" yet.</p>`;
+    } catch (err) { console.error(err); }
+  }
+  let courseDemandDebounce, skillDemandDebounce;
+  document.getElementById('courseDemandSearch').addEventListener('input', (e) => {
+    clearTimeout(courseDemandDebounce);
+    courseDemandDebounce = setTimeout(() => searchCompany(e.target.value.trim(), 'course', 'courseDemandResults'), 250);
+  });
+  document.getElementById('skillDemandSearch').addEventListener('input', (e) => {
+    clearTimeout(skillDemandDebounce);
+    skillDemandDebounce = setTimeout(() => searchCompany(e.target.value.trim(), 'skill', 'skillDemandResults'), 250);
+  });
+  // show something by default
+  searchCompany('', 'course', 'courseDemandResults');
+
+  /* ================= Experience & achievements ================= */
+
+  document.getElementById('btnSaveExperience').addEventListener('click', async () => {
+    const companyRole = document.getElementById('inpExpRole').value.trim();
+    const duration = document.getElementById('inpExpDuration').value.trim();
+    if (!companyRole) { alert('Please add a company & role.'); return; }
+    try {
+      const { profile } = await apiFetch('/profile/experience', { method: 'POST', body: JSON.stringify({ companyRole, duration }) });
+      renderProfileSummary(profile);
+      document.getElementById('inpExpRole').value = '';
+      document.getElementById('inpExpDuration').value = '';
+    } catch (err) { alert(err.message); }
+  });
+
+  document.getElementById('btnSaveAchievement').addEventListener('click', async () => {
+    const title = document.getElementById('inpAchievementTitle').value.trim();
+    if (!title) { alert('Please add a title.'); return; }
+    try {
+      const { profile } = await apiFetch('/profile/achievement', { method: 'POST', body: JSON.stringify({ title }) });
+      renderProfileSummary(profile);
+      document.getElementById('inpAchievementTitle').value = '';
+    } catch (err) { alert(err.message); }
+  });
+
+  /* ================= Career Spotlight (page 2) ================= */
+
+  async function loadSpotlight(){
+    try {
+      const { stories } = await apiFetch('/spotlight');
+      const grid = document.getElementById('spotlightGrid');
+      grid.innerHTML = stories.map(s => {
+        const initials = s.name.trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase();
+        return `
+        <div class="card">
+          <div class="story-head">
+            <div class="avatar-ring">${esc(initials)}</div>
+            <div><div class="who">${esc(s.name)}</div><div class="role">${esc(s.role)}${s.company ? ' · ' + esc(s.company) : ''}${s.years_experience ? ' · ' + esc(s.years_experience) + ' yrs' : ''}</div></div>
+          </div>
+          <p class="story-text">${esc(s.short_quote || '')}</p>
+          <div class="row-between"><span class="tag teal">${esc(s.salary_range || '')}</span><button class="btn ghost" data-story="${s.id}" type="button">Read full story</button></div>
+        </div>`;
+      }).join('') || `<p class="muted">No stories yet.</p>`;
+
+      grid.querySelectorAll('[data-story]').forEach(btn => {
+        btn.addEventListener('click', () => showFullStory(Number(btn.dataset.story), stories));
+      });
+    } catch (err) { console.error('spotlight', err); }
+  }
+
+  function showFullStory(id, stories){
+    const s = stories.find(x => x.id === id);
+    if (!s) return;
+    alert(
+      `${s.name} — ${s.role}${s.company ? ', ' + s.company : ''}\n\n` +
+      `Started from: ${s.started_from || '—'}\n` +
+      `Path taken: ${s.path_taken || '—'}\n\n` +
+      `${s.full_story || ''}`
+    );
+  }
+
+  /* ================= Internships (page 3) ================= */
+
+  async function loadInternships(sector){
+    try {
+      const { internships } = await apiFetch(`/internships?sector=${encodeURIComponent(sector)}`);
+      const grid = document.getElementById('internshipsGrid');
+      grid.innerHTML = internships.map(c => `
+        <div class="card">
+          <div class="row-between"><h3>${esc(c.company)}</h3><span class="tag ${c.status === 'Hiring now' ? 'gold' : c.status === 'Open' ? 'teal' : 'indigo'}">${esc(c.status)}</span></div>
+          <p class="muted" style="margin:6px 0 10px;">Avg. ${c.avgInterns} interns / year · ${c.internsPlaced} students placed to date</p>
+          <p class="muted" style="margin:0 0 6px;font-weight:600;color:var(--ink);">Colleges they visit most:</p>
+          <div class="pill-wrap">${c.colleges.map(col => `<span class="pill">${esc(col)}</span>`).join('')}</div>
+          <p class="muted" style="margin:10px 0 6px;font-weight:600;color:var(--ink);">Skills they look for:</p>
+          <div class="pill-wrap">${c.requiredSkills.map(sk => `<span class="pill">${esc(sk)}</span>`).join('')}</div>
+        </div>
+      `).join('') || `<p class="muted">No internships listed for this sector yet.</p>`;
+
+      loadStanding();
+    } catch (err) { console.error('internships', err); }
+  }
+
+  async function loadStanding(){
+    try {
+      const { standing } = await apiFetch('/internships/standing');
+      const banner = document.getElementById('standingBanner');
+      const text = document.getElementById('standingText');
+      const top = standing.find(s => s.requiredSkills.length);
+      if (top) {
+        banner.hidden = false;
+        text.textContent = `Based on your saved skills, you're the strongest match for ${top.company} (${top.readinessPct}% of the skills they look for). ` +
+          (top.missingSkills.length ? `Still to learn: ${top.missingSkills.join(', ')}.` : `You already cover everything they typically ask for!`);
+      } else {
+        banner.hidden = true;
+      }
+    } catch (err) { /* not fatal */ }
+  }
+
+  document.querySelectorAll('#internshipSectorChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#internshipSectorChips .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      loadInternships(chip.dataset.sector);
+    });
+  });
+
+  /* ================= Q&A (page 4) ================= */
+
+  const askForm = document.getElementById('askForm');
+  document.getElementById('btnAskQuestion').addEventListener('click', () => {
+    askForm.hidden = !askForm.hidden;
+  });
+
+  document.getElementById('btnSubmitQuestion').addEventListener('click', async () => {
+    const title = document.getElementById('inpQTitle').value.trim();
+    const body = document.getElementById('inpQBody').value.trim();
+    if (!title) { alert('Please enter your question.'); return; }
+    try {
+      await apiFetch('/qna/questions', { method: 'POST', body: JSON.stringify({ title, body }) });
+      document.getElementById('inpQTitle').value = '';
+      document.getElementById('inpQBody').value = '';
+      askForm.hidden = true;
+      await loadQuestions();
+    } catch (err) { alert(err.message); }
+  });
+
+  function questionCard(q){
+    const answersHtml = (q.answers || []).map(a => `
+      <div style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px;">
+        <p class="muted" style="margin:0;"><b>${esc(a.answerer_name)}</b>${a.answerer_role ? ', ' + esc(a.answerer_role) : ''}${a.is_bot ? ' · AI' : ''}</p>
+        <p style="margin:4px 0 0;font-size:13.5px;">${esc(a.body)}</p>
+      </div>
+    `).join('');
+
+    return `
+      <div class="card">
+        <div class="row-between"><h3>${esc(q.title)}</h3><span class="tag ${q.status === 'answered' ? 'teal' : 'gold'}">${q.status === 'answered' ? 'Answered' : 'Pending'}</span></div>
+        ${q.body ? `<p class="muted" style="margin-top:6px;">${esc(q.body)}</p>` : ''}
+        ${answersHtml}
+        <div class="row-between" style="margin-top:10px;gap:8px;">
+          <input type="text" placeholder="Write an answer…" data-answer-input="${q.id}" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;font-family:inherit;" />
+          <button class="btn ghost" data-answer-btn="${q.id}" type="button" style="flex-shrink:0;">Reply</button>
+        </div>
+        <button class="btn ghost block" data-bot-btn="${q.id}" type="button" style="margin-top:8px;">Ask SkillSync AI</button>
+      </div>
+    `;
+  }
+
+  async function loadQuestions(){
+    try {
+      const { questions } = await apiFetch('/qna/questions');
+      const grid = document.getElementById('questionsGrid');
+      grid.innerHTML = questions.map(questionCard).join('') || `<p class="muted">No questions yet — be the first to ask.</p>`;
+
+      grid.querySelectorAll('[data-answer-btn]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.answerBtn;
+          const input = grid.querySelector(`[data-answer-input="${id}"]`);
+          const body = input.value.trim();
+          if (!body) return;
+          try {
+            await apiFetch(`/qna/questions/${id}/answer`, { method: 'POST', body: JSON.stringify({ body }) });
+            await loadQuestions();
+          } catch (err) { alert(err.message); }
+        });
+      });
+      grid.querySelectorAll('[data-bot-btn]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true; btn.textContent = 'Thinking…';
+          try {
+            await apiFetch(`/qna/questions/${btn.dataset.botBtn}/bot-answer`, { method: 'POST' });
+            await loadQuestions();
+          } catch (err) { alert(err.message); btn.disabled = false; btn.textContent = 'Ask SkillSync AI'; }
+        });
+      });
+    } catch (err) { console.error('qna', err); }
+  }
+
+  async function loadFaqs(){
+    try {
+      const { faqs } = await apiFetch('/qna/faqs');
+      const wrap = document.getElementById('faqAccordion');
+      wrap.innerHTML = faqs.map(f => `
+        <div class="accordion">
+          <button class="acc-q">${esc(f.question)} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="acc-a"><p>${esc(f.answer)}</p></div>
+        </div>
+      `).join('') || `<p class="muted">No FAQs yet.</p>`;
+
+      wrap.querySelectorAll('.acc-q').forEach(btn => {
+        btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+      });
+    } catch (err) { console.error('faqs', err); }
+  }
+</script>
+</body>
+</html>
